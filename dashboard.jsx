@@ -1163,137 +1163,6 @@ function InfoBox({ items }) {
   );
 }
 
-// ─── Section 02B — 통합 변인 설명 패널 (사용자 요청: 별도 섹션 + 하나의 통합 박스) ───
-function UnifiedVariablesPanel() {
-  // 카테고리 → 변인 항목 묶음
-  const groups = [
-    {
-      title: '② 어깨 폭발력',
-      icon: '💪',
-      accent: '#3b82f6',
-      items: [
-        {
-          term: '어깨 폭발력 (Cocking-phase Arm Power · W/kg)',
-          body: '코킹(Cocking) 단계 — Foot Contact ~ Maximum External Rotation 사이 — 동안 팔 분절(상완+전완+손)에 가해지는 단위 체중당 평균 파워 (Naito 2014 induced power 분석 기반, ΔKE_arm / Δt ÷ massKg = W/kg). 이 단계는 팔이 가속을 시작하는 결정적 구간이라 어깨가 만들어내는 폭발력이 클수록 빠른 ω가 가능하고 결과적으로 구속이 빨라집니다. 단순 어깨 근력이 아니라 짧은 시간(~50ms)에 폭발적으로 출력되는 단위파워 개념. 값이 높지만 구속이 따라오지 않으면 시퀀싱·누수로 손실되는 중이고, 값이 낮은데 팔꿈치 모멘트가 크면 어깨 폭발력 부족을 팔꿈치가 보상하는 부상 위험 상태입니다. 한국 고교 우수 투수 기준 15-22 W/kg 정상, 22-30 W/kg 우수, 30+ W/kg 엘리트, 15 미만 부족 (Naito 2014 elementary baseline ~12 W/kg, MLB 프로 ~30 W/kg). SD가 크면 코킹 동작 일관성 부족 — 시기마다 다른 출력으로 부상 누적 위험 ↑.'
-        }
-      ]
-    },
-    {
-      title: '🦶 디딤발 블록',
-      icon: '🦶',
-      accent: '#a78bfa',
-      items: [
-        {
-          term: '무릎 굴곡 (Front Knee Flexion at FC · °)',
-          body: '앞발(디딤발) 착지 시점의 무릎 굴곡각 (0° = 완전 신전, 클수록 굽힘). 앞다리는 키네틱 체인의 "벽(wall)" 역할로, 골반의 전진 운동을 받아 회전 운동으로 전환시키는 지렛대 받침입니다 (Howenstein 2019). 적정 굴곡으로 착지하면 충격 흡수와 회전 동력 전환이 모두 가능. 너무 작으면(< 25°) 뻣뻣한 착지로 충격 미흡수 → 어깨·팔꿈치로 부담 전이 / 너무 크면(> 55°) 회전축 안정성 저하 → 골반 회전 동력 손실. 한국 고교 우수 30-50° 정상, 25-30° 또는 50-60° 주의, 25° 미만 또는 60° 초과 부적정. SD < 5°가 일관성 우수 기준.'
-        },
-        {
-          term: '무릎 무너짐/뻣뻣 (Knee Collapse · ΔKneeFlex FC→BR)',
-          body: 'FC ~ BR(Ball Release) 동안의 무릎 굴곡 변화량. 양수(+)면 더 굽혀짐(=무너짐, 주저앉음), 음수(−)면 다시 신전됨(=정상 블록 동작), 0 근처면 굴곡 유지(=뻣뻣). 디딤발이 충격 흡수 후 다시 신전(extension)하면서 골반 회전을 가속하는 "다리 펴기 동작"이 핵심. 무릎이 무너지면 키네틱 체인 기반이 흔들려 회전 동력이 새고, 뻣뻣하면 충격 흡수 부족으로 부상 위험 ↑. Δ > +15°(주저앉음) → 디딤발 근력 부족 또는 stride 너무 길음, 결과: 구속 손실 + 어깨 부담 ↑ / Δ < −15°(강한 신전) → 정상 블록 / −5°~+5°(뻣뻣) → 충격 흡수 부족 + Sleeper-stretch 부담. 한국 고교 우수 −15°~−5° 정상(블록), −5°~+5° 주의(뻣뻣), +5°~+15° 약한 무너짐, +15° 이상 명확한 무너짐(즉시 보강 필요).'
-        },
-        {
-          term: '무릎 SSC 활용 (Stretch-Shortening Cycle)',
-          body: 'Stretch-Shortening Cycle. 디딤발 착지 직후 무릎이 잠깐 더 굽혀졌다가(eccentric stretch) 곧바로 다시 펴지는(concentric shortening) 빠른 전환 동작. 인체 결합조직(tendons, fascia)에 잠시 저장된 탄성 에너지를 회전 동력으로 재활용하는 "공짜 에너지" 메커니즘 (Komi 2003). SSC가 잘 활용되면 같은 근력으로 더 큰 출력을 낼 수 있고, 구속 7-12% 향상 효과 (Crotin 2014). Stretch 시간(eccentric phase)이 짧고 깊이가 적정해야 하며 너무 길면(> 200ms) SSC 효과 사라짐. 간접 평가는 CMJ Reactive Strength Index modified로 — RSI-mod > 0.55 m/s 우수, 0.30~0.55 정상, < 0.30 부족. 직접 평가는 디딤발 무릎 굴곡 시계열에서 stretch→shortening 전환 시간 < 150ms 이상적.'
-        }
-      ]
-    },
-    {
-      title: '골반-몸통 전달 (P→T)',
-      icon: '⟶',
-      accent: '#60a5fa',
-      items: [
-        {
-          term: 'P→T Energy Transfer (KE_trunk_peak / KE_pelvis_peak)',
-          body: '골반이 만든 회전 운동에너지가 몸통(trunk)으로 얼마나 증폭되어 전달되는지의 비율. 인접 분절의 회전 KE 비율로 측정하며, 1.0보다 크면 다음 분절이 더 큰 운동량을 가짐(= 키네틱 체인 amplification 정상). 키네틱 체인의 첫 단계로 하체에서 만든 동력이 상체로 넘어가는 핵심 관문 — P→T 전달이 효율적이지 않으면 하체 출력이 아무리 좋아도 구속에 반영되지 않음(Howenstein 2019). 비율 < 1.5 미약(골반 회전이 몸통으로 전달 안 됨, X-factor 부족 또는 시퀀싱 오류), 1.5-3 약한~정상, 3-5 정상 증폭, 5+ 강한 증폭. P→T가 약하면 다음 단계(T→A)도 자동으로 약해짐. Naito 2011 elementary 야구선수 baseline ~3×, 한국 고교 우수 ≥ 3× 정상.'
-        },
-        {
-          term: '앞발 착지 시 플라잉오픈 (Flying Open at FC · trunkRotAtFP)',
-          body: '앞발이 땅에 닿는 시점의 몸통 회전 각도(마운드 정면 기준 0°, 양수는 타자 쪽으로 회전된 상태). 이상적으로 FC 시점에 trunk가 닫혀 있어야(0~5° 이내) 함. 양수가 크면 "플라잉 오픈" — 몸통이 일찍 열린 상태. 플라잉 오픈은 골반-몸통 분리(X-factor)를 손실시키고 회전 동력 전달을 약화시키는 대표적 메카닉 결함입니다. 몸통이 미리 열려 있으면 골반 회전이 와도 추가 토크가 발생하지 않아 P→T 비율이 약해짐(Aguinaldo 2007: trunkRotAtFP > 4°부터 어깨 토크 유의 증가). 0~5° 정상, 5~15° 약한 플라잉오픈(P→T 효율 저하 시작), 15° 이상 명확한 플라잉오픈(X-factor 손실, 어깨 부담↑, 구속·제구 동시 저하). 한국 고교 우수 < 5° 정상, 5-10° 주의, 10-15° 보강 필요, 15° 이상 즉시 점검(mound 정렬 + open shoulder drill).'
-        },
-        {
-          term: 'FC 몸통 자세 (Trunk Forward Tilt at FC · °)',
-          body: '앞발 착지 시점의 몸통 전방/후방 기울기. 부호 보존: 양수(+) = 앞으로 굽혀짐, 음수(−) = 뒤로 젖혀짐. 직립(0°) 또는 약간 뒤로 젖힌 상태(음수)가 이상적입니다 — FC 시점에 뒤로 젖혀 있으면 가속거리(forward acceleration distance)를 충분히 확보할 수 있고, 이후 BR 시점까지 35-45° 앞으로 굽히는 큰 swing이 가능해 공에 더 큰 모멘텀을 전달할 수 있습니다(Matsuo 2001, Werner 2008). FC에서 이미 앞으로 무너져 있으면 가속거리가 줄어들어 같은 노력으로도 구속이 낮아지고 어깨 부담 ↑. 한국 고교 우수 ≤ −5°(뒤로 젖힘) 우수, −5°~+5°(직립) 양호, +5°~+15° 약간 앞으로(가속거리 손실 시작), +15° 이상 이미 앞으로 무너짐(즉시 점검).'
-        }
-      ]
-    },
-    {
-      title: '몸통-팔 전달 (T→A)',
-      icon: '⟹',
-      accent: '#3b82f6',
-      items: [
-        {
-          term: 'T→A Energy Transfer (KE_arm_peak / KE_trunk_peak)',
-          body: '몸통의 회전 운동에너지가 팔로 얼마나 증폭되어 전달되는지의 비율. 분절이 작아질수록(I↓) 같은 에너지에서 더 빠른 ω가 가능하므로 정상적으로는 KE_arm > KE_trunk가 되어야 함. 키네틱 체인의 마지막 핵심 단계 — 몸통의 회전 동력이 팔로 효율적으로 넘어가야 빠른 공이 만들어집니다(Aguinaldo & Escamilla 2019, Naito 2011). T→A 전달이 약하면 몸통 회전 속도가 빨라도 팔 회전 속도가 따라오지 못해 구속이 정체. 비율 < 1.0 에너지 손실(몸통이 팔을 끌어주지 못함, 어깨 가동성 또는 시퀀싱 문제, MER 부족 의심), 1.0-1.7 약한 증폭, 1.7-2.5 정상 증폭, 2.5+ 강한 증폭. 전형적 한국 고교 우수 투수 1.7-2.7×. Naito 2011 baseline ~2.7×, Aguinaldo 2022 induced power 분석에서 전완 파워의 86%가 몸통에서 유래.'
-        },
-        {
-          term: '릴리즈 시 몸통 전방 굴곡 (Trunk Forward Flexion at BR · °)',
-          body: 'Ball Release 시점의 몸통 전방 기울기 각도(직립 0°, 앞으로 굽혀질수록 +각도). 한국 고교 우수 투수 35-45°가 일반적. 릴리즈 시 몸통이 적절히 앞으로 기울어져야(forward trunk flexion) 팔이 자연스럽게 회전하면서 공에 마지막 가속을 줄 수 있고, 적정한 전방 굴곡은 팔꿈치 부담을 줄이고 릴리스 포인트를 안정화시킵니다(Fleisig 1999, Matsuo 2001). < 25° 직립 자세(어깨로만 던짐, 어깨 부담↑), 25-35° 약한 굴곡, 35-45° 정상, 45-55° 깊은 굴곡(제구 우수 가능, 시야 확보 주의), > 55° 과도한 굴곡(몸통이 빠지면서 구속 손실). SD < 3° 일관성 우수 — 시기마다 다른 굴곡각이면 릴리스 포인트 흔들림 → 제구 저하. T→A 전달 비율과 함께 분석: 굴곡각 적정 + T→A 정상 = 효율적 마무리.'
-        }
-      ]
-    },
-    {
-      title: '몸통-팔 힘 배율',
-      icon: '×',
-      accent: '#a78bfa',
-      items: [
-        {
-          term: 'Trunk-to-Arm Force Amplification (induced power)',
-          body: '몸통이 팔에 induce한 파워의 비율(Aguinaldo 2022). 팔의 회전이 만들어내는 총 파워 중 몸통의 회전이 직접 기여한 비율을 분석. T→A 전달(KE 비율)이 운동에너지의 양적 비교라면, 이는 파워 인과 관계의 분석입니다. T→A 전달은 "에너지가 얼마나 증폭됐는가"를, 힘 배율은 "그 증폭의 원인이 어디인가"를 나타냅니다. 힘 배율이 높을수록 → 몸통이 진짜 동력원이고 팔은 잘 끌려가는 효율적 메카닉. 낮으면 → 팔이 자체 출력으로 던지는 비효율적 메카닉(어깨·팔꿈치 부담 ↑). 힘 배율 ≥ 80%(정상): 몸통이 주된 동력원, 팔은 efficient force translation의 도구 — 안전하고 효율적 / 60-80% 정상 범위 / < 60% 팔이 직접 출력 비중 ↑(어깨 토크와 팔꿈치 모멘트 비정상적으로 높을 가능성, 부상 위험 신호). Aguinaldo 2022: 엘리트 투수 평균 86%. 직접 측정은 induced power 분석이 필요해 ±15% 추정 오차 있음. 간접 진단으로 T→A 전달 비율(≥ 1.7×) + 적정 팔꿈치 모멘트(< 100 N·m) + 정상 어깨 폭발력(15-30 W/kg) 조합으로 종합 판단 — 셋이 모두 좋으면 힘 배율도 우수일 가능성 ↑.'
-        }
-      ]
-    }
-  ];
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      {groups.map((g, gi) => (
-        <div key={gi} style={{
-          padding: '14px 16px',
-          borderBottom: gi < groups.length - 1 ? '1px solid var(--d-border)' : 'none',
-          background: gi % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.012)'
-        }}>
-          {/* 그룹 헤더 */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
-            paddingBottom: 10, borderBottom: `2px solid ${g.accent}33`
-          }}>
-            <span style={{ fontSize: 18, color: g.accent, fontWeight: 800, fontFamily: 'Inter' }}>{g.icon}</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: g.accent, letterSpacing: '0.3px' }}>{g.title}</span>
-          </div>
-          {/* 그룹 내 항목들 — 본문은 펼쳐진 상태로 한꺼번에 표시 (사용자 요청: 한 박스에 통합) */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {g.items.map((it, ii) => (
-              <div key={ii} style={{
-                borderLeft: `3px solid ${g.accent}`, paddingLeft: 12,
-                paddingTop: 4, paddingBottom: 4
-              }}>
-                <div style={{
-                  fontSize: 12.5, fontWeight: 700, color: 'var(--d-fg1)',
-                  marginBottom: 6, letterSpacing: '0.2px'
-                }}>
-                  {it.term}
-                </div>
-                <div style={{
-                  fontSize: 12, lineHeight: 1.75, color: 'var(--d-fg2)'
-                }}>
-                  {it.body}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-      {/* 푸터 — 사용된 baseline 출처 */}
-      <div style={{
-        padding: '10px 16px', fontSize: 10.5, color: 'var(--d-fg3)',
-        background: 'rgba(96,165,250,0.04)',
-        borderTop: '1px solid var(--d-border)', lineHeight: 1.55
-      }}>
-        <b style={{ color: '#60a5fa' }}>References ·</b> Naito 2011/2014 (Hum Mov Sci) · Aguinaldo & Escamilla 2019, 2022 · Howenstein 2019 · Matsuo 2001 · Fleisig 1999 · Werner 2008 · Komi 2003 · Crotin 2014. 임계값은 한국 고교 우수 투수 baseline 기준이며 측정 시스템(Uplift / 마커리스)에 따라 ±15% 추정 오차가 있습니다.
-      </div>
-    </div>
-  );
-}
 
 // Section 05 — 키네틱 체인 KE/Power/Transfer/Elbow 카드
 function KineticChainPanel({ kc }) {
@@ -1443,7 +1312,9 @@ function KineticChainPanel({ kc }) {
 }
 
 // Section 06 — 5축 구속 종합 RadarChart + 영역별 카드
-function VelocityRadarPanel({ data }) {
+function VelocityRadarPanel({ data, mode }) {
+  // mode: 'both'(default · 좌측 레이더+우측 카드), 'cards'(우측 5모델 카드만), 'radar'(좌측 레이더+요약만)
+  const m = mode || 'both';
   if (!data || data.length === 0) return null;
   const statusOf = (score) => {
     if (score == null) return { color: '#94a3b8', text: '데이터 없음', tone: 'na' };
@@ -1453,6 +1324,130 @@ function VelocityRadarPanel({ data }) {
     if (score >= 35)   return { color: '#f59e0b', text: '평균 미만', tone: 'low' };
     return { color: '#ef4444', text: '낮음', tone: 'bad' };
   };
+
+  // ─── cards mode: 5영역(=5모델) 카드만 표시 ───
+  if (m === 'cards') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{
+          padding: 10, fontSize: 11, color: 'var(--d-fg2)', lineHeight: 1.55,
+          background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.2)', borderRadius: 6,
+          marginBottom: 4
+        }}>
+          <b style={{ color: '#60a5fa' }}>5개 분석 모델</b> · 구속을 결정하는 다섯 영역을 별도 변인 묶음으로 평가합니다.
+          드라이브라인 4모델(Arm Action / Block / Posture / Rotation) + ⭐ 키네틱 체인 효율(우리 시스템 고유).
+          각 영역은 0-100 점수이며, 50=엘리트 평균, 80=엘리트 상위.
+        </div>
+        {data.map((ax, i) => {
+          const s = statusOf(ax.value);
+          return (
+            <div key={ax.label} className="panel" style={{
+              background: 'transparent',
+              border: `1px solid ${ax.isOurOwn ? 'rgba(20,184,166,0.4)' : 'var(--d-border)'}`,
+              padding: '12px 14px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: '#94a3b8',
+                      background: 'rgba(255,255,255,0.04)', padding: '2px 7px', borderRadius: 3,
+                      letterSpacing: '0.5px', fontFamily: 'Inter'
+                    }}>모델 {i + 1}</span>
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--d-fg1)' }}>{ax.label}</span>
+                    {ax.isOurOwn && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, color: '#5eead4',
+                        background: 'rgba(20,184,166,0.15)', padding: '1px 6px', borderRadius: 3
+                      }}>우리 시스템</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--d-fg3)', marginTop: 3 }}>{ax.sub}</div>
+                  {ax.dlMapping && (
+                    <div style={{ fontSize: 10, marginTop: 3, color: ax.isOurOwn ? '#5eead4' : 'var(--d-fg3)', fontStyle: 'italic' }}>
+                      {ax.dlMapping}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+                    {ax.display}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: s.color }}>{s.text}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ─── radar mode: RadarChart + 점수 요약만 표시 (종합) ───
+  if (m === 'radar') {
+    const valid = data.filter(d => d.value != null);
+    const avg = valid.length > 0 ? valid.reduce((s, d) => s + d.value, 0) / valid.length : null;
+    const overallStatus = avg != null ? statusOf(avg) : null;
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div className="panel" style={{
+          background: 'transparent', border: '1px solid var(--d-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
+        }}>
+          <RadarChart data={data}/>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {avg != null && (
+            <div className="panel" style={{
+              background: `linear-gradient(135deg, ${overallStatus.color}15, ${overallStatus.color}05)`,
+              border: `1.5px solid ${overallStatus.color}55`, padding: '16px 18px', textAlign: 'center'
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--d-fg3)', letterSpacing: '1px', marginBottom: 6 }}>
+                5모델 평균 점수
+              </div>
+              <div style={{ fontSize: 36, fontWeight: 800, fontFamily: 'Inter', color: overallStatus.color, lineHeight: 1 }}>
+                {Math.round(avg)}
+                <span style={{ fontSize: 14, color: 'var(--d-fg3)', marginLeft: 4 }}>/100</span>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: overallStatus.color, marginTop: 4 }}>
+                {overallStatus.text}
+              </div>
+            </div>
+          )}
+          {/* 5모델 미니 점수 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {data.map(ax => {
+              const s = statusOf(ax.value);
+              return (
+                <div key={ax.label} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+                  padding: '8px 12px',
+                  background: 'rgba(0,0,0,0.2)', border: '1px solid var(--d-border)', borderRadius: 6
+                }}>
+                  <span style={{ fontSize: 12, color: 'var(--d-fg2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {ax.isOurOwn && <span style={{ color: '#5eead4', fontSize: 9 }}>⭐</span>}
+                    {ax.label}
+                  </span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: s.color, fontFamily: 'Inter' }}>
+                    {ax.display}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{
+            padding: 10, fontSize: 10.5, color: 'var(--d-fg2)', lineHeight: 1.5,
+            background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 6
+          }}>
+            <b style={{ color: '#fbbf24' }}>해석</b> · 다각형이 클수록 균형 잡힌 메커닉. 한쪽으로 치우치면 그 영역이 약점.
+            상세 모델별 변인 분석은 <b style={{ color: '#60a5fa' }}>04 구속 변인 5모델 분석</b> 참조.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── both mode (기존 호환 — 다른 곳에서 그대로 호출 가능) ───
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, alignItems: 'start' }}>
       <div className="panel" style={{ background: 'transparent', border: '1px solid var(--d-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
@@ -2408,27 +2403,30 @@ function SinglePitcherView({ p }) {
         </div>
       </SectionBlock>
 
-      {/* Section 02B — 변인 설명 (사용자 요청: 별도 섹션으로 분리, 하나의 통합 박스) */}
-      <SectionBlock num="02B" title="Velocity Variables Reference · 구속 메카닉스 변인 설명"
-        sub="· 마네킹에 표시된 핵심 변인들의 정의 · 투구에서의 의미 · 해석 · 판단 기준 (참고용)">
-        <div className="panel" style={{ padding: '4px 4px 4px 4px' }}>
-          <UnifiedVariablesPanel/>
-        </div>
-      </SectionBlock>
+      {/* Section 04 — 구속 변인 5모델 분석 (사용자 요청 v14: v7 구조 복원)
+          5개 영역(드라이브라인 4모델 + 우리 시스템 키네틱 체인 효율)별 변인 묶음 분석
+          06 종합과 차별화: 04는 모델별 상세 카드, 06은 RadarChart + 평균 종합 점수 */}
+      {p.velocityRadar && p.velocityRadar.length > 0 && (
+        <SectionBlock num="04" title="Velocity Drivers · 5-Model Analysis · 구속 변인 5모델 분석"
+          sub="· 5개 분석 모델별 영역 점수 — 드라이브라인 4모델(팔동작 · 하체블록 · 로딩능력 · 회전파워) + ⭐ 키네틱 체인 효율">
+          <VelocityRadarPanel data={p.velocityRadar} mode="cards"/>
+        </SectionBlock>
+      )}
 
-      {/* Section 05 — 키네틱 체인 & 정밀 지표 통합 분석 (files Section 5 포팅) */}
+      {/* Section 05 — 키네틱 체인 & 정밀 지표 통합 분석 (v7 제목 복원)
+          분절 KE · Transfer · Peak Power · Elbow Moment 4개 그룹 카드 + 각 변인 정의·의미·해석·판단 InfoBox */}
       {p.kineticChain && (
         <SectionBlock num="05" title="Kinetic Chain & Precision · 키네틱 체인 & 정밀 지표 통합 분석"
-          sub={`· 분절 운동에너지 · Transfer 비율 · Peak Power · Elbow Inverse Dynamics${p.energy?.leakPct ? ` · 종합 누수율 ${p.energy.leakPct}%` : ''}`}>
+          sub={`· 분절 운동에너지 (KE) · Transfer 비율 · Peak Power · Elbow Inverse Dynamics${p.energy?.leakPct ? ` · 종합 누수율 ${p.energy.leakPct}%` : ''} · 각 변인 정의·의미·해석·판단 기준 포함`}>
           <KineticChainPanel kc={p.kineticChain}/>
         </SectionBlock>
       )}
 
-      {/* Section 06 — 구속 요인 종합 (5축 RadarChart + 영역별 카드) */}
+      {/* Section 06 — 구속 요인 종합 (5축 RadarChart + 평균 점수 + 미니 점수 표) */}
       {p.velocityRadar && p.velocityRadar.length > 0 && (
         <SectionBlock num="06" title="Velocity Synthesis · 구속 요인 종합"
-          sub="· 5영역 종합 평가 — 드라이브라인 4모델 + ⭐ 키네틱 체인 효율 (우리 시스템 고유)">
-          <VelocityRadarPanel data={p.velocityRadar}/>
+          sub="· 5모델 점수의 다이어그램 종합 — 한눈에 보는 메카닉 균형 + 평균 점수">
+          <VelocityRadarPanel data={p.velocityRadar} mode="radar"/>
         </SectionBlock>
       )}
 
@@ -2465,7 +2463,7 @@ function SinglePitcherView({ p }) {
       )}
 
       {/* Section: SW */}
-      <SectionBlock num="04" title="Strengths & Weaknesses · 강점·약점"
+      <SectionBlock num="04B" title="Strengths & Weaknesses · 강점·약점"
         sub="· 통합 판정 기반">
         <div className="sw-grid">
           <div>
@@ -3703,15 +3701,15 @@ function App({ onBack }) {
   const active = pitchers.find(p => p.id === activeId) || pitchers[0];
 
   const navItems = [
-    { id: 'overview', label: 'Overview',     icon: Ic.home,     num: '00' },
-    { id: 'physical', label: '구속 관련 체력', icon: Ic.body,     num: '01' },
+    { id: 'overview', label: 'Overview',          icon: Ic.home,     num: '00' },
+    { id: 'physical', label: '구속 관련 체력',    icon: Ic.body,     num: '01' },
     { id: 'mech',     label: '구속 관련 메카닉스', icon: Ic.motion,   num: '02' },
-    { id: 'mechVars', label: '구속 변인 설명',     icon: Ic.motion,   num: '02B' },
+    { id: 'velSyn5',  label: '5모델 분석',         icon: Ic.star,     num: '04' },
     { id: 'kinetic',  label: '키네틱 체인 정밀',   icon: Ic.motion,   num: '05' },
     { id: 'velSyn',   label: '구속 요인 종합',     icon: Ic.star,     num: '06' },
     { id: 'command',  label: '제구 관련 메카닉스', icon: Ic.flag,     num: '03' },
     { id: 'summary',  label: '종합 평가',          icon: Ic.star,     num: 'E' },
-    { id: 'sw',       label: '강점·약점',          icon: Ic.star,     num: '04' },
+    { id: 'sw',       label: '강점·약점',          icon: Ic.star,     num: '04B' },
     { id: 'flags',    label: '체크 포인트',        icon: Ic.flag,     num: '05B' },
   ];
 
@@ -3722,7 +3720,7 @@ function App({ onBack }) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    const numMap = { physical: '01', mech: '02', mechVars: '02B', command: '03', sw: '04', flags: '05B', kinetic: '05', velSyn: '06', summary: 'E' };
+    const numMap = { physical: '01', mech: '02', command: '03', sw: '04B', flags: '05B', velSyn5: '04', kinetic: '05', velSyn: '06', summary: 'E' };
     const targetNum = numMap[id];
     setTimeout(() => {
       const block = document.querySelector(`.section-block[data-section-num="${targetNum}"]`);
