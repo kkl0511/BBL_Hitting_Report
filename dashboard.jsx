@@ -1117,6 +1117,380 @@ function ExpectedVelocityPanel({ p }) {
 }
 
 /* ---------------- COMMAND PROFILE PANEL ---------------- */
+/* ---------------- 신규 패널 (Section 05/06/D/E) ---------------- */
+
+// Section 05 — 키네틱 체인 KE/Power/Transfer/Elbow 카드
+function KineticChainPanel({ kc }) {
+  if (!kc) return null;
+  const toneColor = { good: '#10b981', mid: '#60a5fa', low: '#f59e0b', bad: '#ef4444', na: '#94a3b8' };
+  const KECard = ({ label, val, sd, total, color }) => (
+    <div className="panel" style={{ background: 'transparent', border: '1px solid var(--d-border)', padding: '12px 14px' }}>
+      <div className="kicker" style={{ color }}>{label} 회전 KE</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+        <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+          {val != null ? val.toFixed(1) : '—'}
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>J</span>
+        {sd != null && sd > 0 && (
+          <span style={{ fontSize: 10, color: 'var(--d-fg3)', marginLeft: 4 }}>SD ±{sd.toFixed(1)}</span>
+        )}
+      </div>
+      {val != null && (
+        <div style={{ fontSize: 10, color: 'var(--d-fg3)', marginTop: 2 }}>
+          추정 ±{(val * 0.12).toFixed(1)}J (±12%)
+        </div>
+      )}
+    </div>
+  );
+  const TransferCard = ({ label, formula, t }) => (
+    <div className="panel" style={{ background: 'transparent', border: `1px solid ${toneColor[t.tone]}40`, padding: '12px 14px' }}>
+      <div className="kicker">{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+        <span style={{ fontSize: 24, fontWeight: 800, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+          {t.val != null ? t.val.toFixed(1) : '—'}
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>×</span>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--d-fg3)', marginTop: 2 }}>{formula}</div>
+      <div style={{ fontSize: 11, color: toneColor[t.tone], marginTop: 4, fontWeight: 600 }}>{t.text}</div>
+    </div>
+  );
+  const PowerCard = ({ label, val }) => (
+    <div className="panel" style={{ background: 'transparent', border: '1px solid var(--d-border)', padding: '12px 14px' }}>
+      <div className="kicker">{label}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+        <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+          {val != null ? val.toLocaleString() : '—'}
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>W</span>
+      </div>
+      <div style={{ fontSize: 10, color: 'var(--d-fg3)', marginTop: 2 }}>순간 최대 파워 (dKE/dt max)</div>
+    </div>
+  );
+
+  const hasKE = kc.KE_pelvis?.val != null || kc.KE_trunk?.val != null || kc.KE_arm?.val != null;
+  const hasTransfer = kc.transferPT_KE?.val != null || kc.transferTA_KE?.val != null;
+  const hasPower = kc.peakPowerTrunk != null || kc.peakPowerArm != null;
+  const hasElbow = kc.elbowPeakTorqueNm?.val != null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {hasKE && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--d-fg3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+            분절 운동에너지 (회전 KE 기준 · ½·I·ω²)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+            <KECard label="Pelvis" val={kc.KE_pelvis?.val} sd={kc.KE_pelvis?.sd} color="#60a5fa"/>
+            <KECard label="Trunk"  val={kc.KE_trunk?.val}  sd={kc.KE_trunk?.sd}  color="#a78bfa"/>
+            <KECard label="Arm"    val={kc.KE_arm?.val}    sd={kc.KE_arm?.sd}    color="#f472b6"/>
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--d-fg3)', fontStyle: 'italic', marginTop: 6 }}>
+            Naito 2011 / Aguinaldo & Escamilla 2019 — 키네틱 체인 amplification convention 적용. Ae M, Tang H, Yokoi T (1992) 일본인 운동선수 분절 inertia 표 기반.
+          </div>
+        </div>
+      )}
+      {hasTransfer && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--d-fg3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+            Transfer 비율 (회전 KE amplification)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+            <TransferCard label="Pelvis → Trunk" formula="KE_trunk_peak / KE_pelvis_peak · Naito 2011 ~3×" t={kc.transferPT_KE}/>
+            <TransferCard label="Trunk → Arm"    formula="KE_arm_peak / KE_trunk_peak · Naito 2011 ~2.7×" t={kc.transferTA_KE}/>
+          </div>
+        </div>
+      )}
+      {hasPower && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--d-fg3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+            순간 최대 파워 (Peak dE/dt · Wasserberger 2024)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+            <PowerCard label="Power → Trunk" val={kc.peakPowerTrunk}/>
+            <PowerCard label="Power → Arm"   val={kc.peakPowerArm}/>
+          </div>
+        </div>
+      )}
+      {hasElbow && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--d-fg3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+            팔꿈치 합성 모멘트 (Inverse Dynamics · Yanai 2023)
+          </div>
+          <div className="panel" style={{ background: 'transparent', border: '1px solid var(--d-border)', padding: '12px 14px' }}>
+            <div className="kicker">Peak Resultant Elbow Moment</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+              <span style={{ fontSize: 22, fontWeight: 800, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+                {kc.elbowPeakTorqueNm.val.toFixed(0)}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>N·m</span>
+              {kc.elbowPeakTorqueNm.sd != null && (
+                <span style={{ fontSize: 10, color: 'var(--d-fg3)', marginLeft: 4 }}>SD ±{kc.elbowPeakTorqueNm.sd.toFixed(1)}</span>
+              )}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--d-fg3)', fontStyle: 'italic', marginTop: 4 }}>
+              팔뚝+손+공 강체 모델 (Feltner 1989) · 추정 ±35%
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Section 06 — 5축 구속 종합 RadarChart + 영역별 카드
+function VelocityRadarPanel({ data }) {
+  if (!data || data.length === 0) return null;
+  const statusOf = (score) => {
+    if (score == null) return { color: '#94a3b8', text: '데이터 없음', tone: 'na' };
+    if (score >= 80)   return { color: '#10b981', text: '엘리트 상위', tone: 'good' };
+    if (score >= 65)   return { color: '#84cc16', text: '엘리트 평균↑', tone: 'mid' };
+    if (score >= 50)   return { color: '#84cc16', text: '엘리트 평균', tone: 'mid' };
+    if (score >= 35)   return { color: '#f59e0b', text: '평균 미만', tone: 'low' };
+    return { color: '#ef4444', text: '낮음', tone: 'bad' };
+  };
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, alignItems: 'start' }}>
+      <div className="panel" style={{ background: 'transparent', border: '1px solid var(--d-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
+        <RadarChart data={data}/>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {data.map(ax => {
+          const s = statusOf(ax.value);
+          return (
+            <div key={ax.label} className="panel" style={{
+              background: 'transparent',
+              border: `1px solid ${ax.isOurOwn ? 'rgba(20,184,166,0.4)' : 'var(--d-border)'}`,
+              padding: '10px 12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--d-fg1)' }}>{ax.label}</span>
+                    {ax.isOurOwn && (
+                      <span style={{
+                        fontSize: 9, fontWeight: 700, color: '#5eead4',
+                        background: 'rgba(20,184,166,0.15)', padding: '1px 6px', borderRadius: 3
+                      }}>우리 시스템</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: 'var(--d-fg3)' }}>{ax.sub}</div>
+                  {ax.dlMapping && (
+                    <div style={{ fontSize: 10, marginTop: 2, color: ax.isOurOwn ? '#5eead4' : 'var(--d-fg3)', fontStyle: 'italic' }}>
+                      {ax.dlMapping}
+                    </div>
+                  )}
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+                    {ax.display}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: s.color }}>{s.text}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div style={{
+          padding: 10, fontSize: 10.5, color: 'var(--d-fg2)', lineHeight: 1.5,
+          background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 6
+        }}>
+          <b style={{ color: '#fbbf24' }}>점수 산정</b>: 각 축은 핵심 변인을 엘리트 중간값 기준으로 정규화한 후 평균낸 0-100점.
+          50점=엘리트 평균, 80점=엘리트 상위. 다각형이 클수록 균형 잡힌 메커닉.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Section D — 제구 일관성과 안정성 (5 영역별 카드 그룹)
+function ConsistencyPanel({ cs }) {
+  if (!cs) return null;
+  const toneColor = { good: '#10b981', mid: '#60a5fa', low: '#f59e0b', bad: '#ef4444', na: '#94a3b8' };
+  const gradeColor = { A: '#10b981', B: '#84cc16', C: '#f59e0b', D: '#ef4444' };
+  const Group = ({ icon, title, color, grade, desc, cards }) => {
+    if (!cards || cards.length === 0) return null;
+    return (
+      <div style={{ marginBottom: 14 }}>
+        <div style={{
+          display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8,
+          paddingLeft: 8, borderLeft: `3px solid ${color}`
+        }}>
+          <span style={{ fontSize: 14 }}>{icon}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color }}>{title}</span>
+          <span style={{ fontSize: 10, color: 'var(--d-fg3)' }}>— {desc}</span>
+          {grade && grade !== 'N/A' && (
+            <span style={{
+              marginLeft: 'auto', fontSize: 11, fontWeight: 800,
+              color: gradeColor[grade] || '#94a3b8',
+              background: `${gradeColor[grade] || '#94a3b8'}1a`,
+              padding: '1px 8px', borderRadius: 4
+            }}>{grade}</span>
+          )}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(cards.length, 3)}, 1fr)`, gap: 8, paddingLeft: 11 }}>
+          {cards.map((c, i) => (
+            <div key={i} className="panel" style={{
+              background: 'transparent',
+              border: `1px solid ${c.tone && c.tone !== 'na' ? toneColor[c.tone] + '60' : 'var(--d-border)'}`,
+              padding: '10px 12px'
+            }}>
+              <div style={{ fontSize: 10.5, color: 'var(--d-fg3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{c.label}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+                  {typeof c.value === 'number' ? c.value.toFixed(c.value < 10 ? 2 : 0) : c.value}
+                </span>
+                <span style={{ fontSize: 10.5, color: 'var(--d-fg3)' }}>{c.unit}</span>
+                <span style={{ fontSize: 10, marginLeft: 'auto', color: toneColor[c.tone] || 'var(--d-fg3)', fontWeight: 600 }}>
+                  {c.text}
+                </span>
+              </div>
+              {c.description && <div style={{ fontSize: 10.5, color: 'var(--d-fg3)', marginTop: 4 }}>{c.description}</div>}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+  return (
+    <div>
+      <Group icon="🦶" title="Foot Contact" color="#f472b6" grade={cs.footContact.grade}
+        desc="FC 시점 자세 일관성 — 키네틱 체인 시작점" cards={cs.footContact.cards}/>
+      <Group icon="🌀" title="Sequencing" color="#f472b6" grade={cs.sequencing.grade}
+        desc="분절 가속 타이밍 일관성 (lag CV)" cards={cs.sequencing.cards}/>
+      <Group icon="💨" title="Power Output" color="#f472b6" grade={cs.powerOutput.grade}
+        desc="출력 강도 일관성 (CV)" cards={cs.powerOutput.cards}/>
+      <Group icon="🎯" title="Release Position" color="#f472b6" grade={cs.releasePos.grade}
+        desc="릴리스 시 자세 일관성 (SD)" cards={cs.releasePos.cards}/>
+      <Group icon="⏱️" title="Release Timing" color="#f472b6" grade={cs.releaseTiming.grade}
+        desc="공을 놓는 시점 일관성 (CV)" cards={cs.releaseTiming.cards}/>
+    </div>
+  );
+}
+
+// Section E — 종합 평가 (구속·제구·체력 점수 + Mechanical Ceiling + 우선순위)
+function SummaryScoresPanel({ ss }) {
+  if (!ss) return null;
+  const gradeColor = (g) => {
+    if (!g || g === '—') return '#94a3b8';
+    if (g.startsWith('A')) return '#10b981';
+    if (g.startsWith('B')) return '#84cc16';
+    if (g.startsWith('C')) return '#f59e0b';
+    if (g.startsWith('D') || g === 'F') return '#ef4444';
+    return '#94a3b8';
+  };
+  const ScoreCard = ({ kind, label, score, grade, accent }) => (
+    <div className="panel" style={{
+      background: 'transparent', border: `1px solid ${accent}60`, padding: '14px 16px'
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '1px' }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 6 }}>
+        <span style={{ fontSize: 28, fontWeight: 800, fontFamily: 'Inter', color: gradeColor(grade) }}>
+          {grade || '—'}
+        </span>
+        <span style={{ fontSize: 22, fontWeight: 700, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+          {score != null ? score : '—'}
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>/ 100</span>
+      </div>
+    </div>
+  );
+  const PriorityFix = ({ rank, kind, title, detail, action }) => {
+    const kindLabel = { velocity: '구속', command: '제구', fitness: '체력', injury: '부상', mixed: '종합' }[kind] || '';
+    const kindColor = { velocity: '#f59e0b', command: '#a78bfa', fitness: '#10b981', injury: '#ef4444' }[kind] || '#94a3b8';
+    const rankColor = ['#ef4444', '#f59e0b', '#84cc16', '#60a5fa', '#94a3b8'][rank - 1] || '#94a3b8';
+    return (
+      <div className="panel" style={{
+        background: 'transparent', border: '1px solid var(--d-border)',
+        padding: '12px 14px', marginBottom: 8,
+        borderLeft: `3px solid ${rankColor}`
+      }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+          <span style={{
+            fontSize: 10, fontWeight: 800, color: rankColor,
+            background: `${rankColor}1a`, padding: '2px 8px', borderRadius: 4
+          }}>우선순위 {rank}</span>
+          {kindLabel && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: kindColor }}>· {kindLabel}</span>
+          )}
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--d-fg1)', flex: 1 }}>{title}</span>
+        </div>
+        {detail && <div style={{ fontSize: 11.5, color: 'var(--d-fg2)', marginTop: 2 }}>{detail}</div>}
+        {action && (
+          <div style={{ fontSize: 11, color: 'var(--d-fg2)', marginTop: 6,
+            padding: '6px 10px', background: 'rgba(96,165,250,0.06)', borderRadius: 4 }}>
+            <b style={{ color: '#60a5fa' }}>훈련 제안:</b> {action}
+          </div>
+        )}
+      </div>
+    );
+  };
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Mechanical Ceiling */}
+      {ss.ceiling && (
+        <div className="panel" style={{
+          background: 'linear-gradient(90deg, rgba(245,158,11,0.08), rgba(20,184,166,0.08))',
+          border: '1px solid rgba(20,184,166,0.3)', padding: '14px 18px'
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#5eead4', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+            🎯 Mechanical Ceiling — 역학적 잠재 구속
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>현재 평균</span>
+              <span style={{ fontSize: 16, fontWeight: 700, marginLeft: 6, fontFamily: 'Inter', color: 'var(--d-fg1)' }}>
+                {ss.ceiling.currentMph} <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>mph</span>
+                <span style={{ fontSize: 10, color: 'var(--d-fg3)', marginLeft: 4 }}>({ss.ceiling.currentKmh} km/h)</span>
+              </span>
+            </div>
+            <span style={{ color: 'var(--d-fg3)', fontSize: 14 }}>→</span>
+            <div>
+              <span style={{ fontSize: 11, color: '#5eead4' }}>잠재 구속 (메커닉 100점)</span>
+              <span style={{ fontSize: 20, fontWeight: 800, marginLeft: 6, fontFamily: 'Inter', color: '#5eead4' }}>
+                {ss.ceiling.ceilingMph} <span style={{ fontSize: 11, color: 'var(--d-fg3)' }}>mph</span>
+                <span style={{ fontSize: 10, color: 'var(--d-fg3)', marginLeft: 4 }}>({ss.ceiling.ceilingKmh} km/h)</span>
+              </span>
+              {ss.ceiling.potentialMphGain >= 1 && (
+                <span style={{ fontSize: 11, marginLeft: 8, color: '#fbbf24', fontWeight: 700 }}>
+                  +{ss.ceiling.potentialMphGain} mph
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{ fontSize: 10.5, marginTop: 8, color: 'var(--d-fg3)', lineHeight: 1.5 }}>
+            현재 메커닉 점수가 <b style={{ color: '#fbbf24' }}>{ss.ceiling.velocityScore}/100</b>이며,
+            메커닉을 100점까지 향상시키면 <b style={{ color: '#5eead4' }}>{ss.ceiling.ceilingKmh} km/h</b>까지 잠재 구속을 끌어올릴 수 있습니다 (보수적 추정: 메커닉 6점당 1mph).
+          </div>
+        </div>
+      )}
+
+      {/* 4개 점수 카드 — 구속/제구/체력/종합 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        <ScoreCard label="① 구속 (메카닉)" score={ss.velocity.score} grade={ss.velocity.grade} accent="#f59e0b"/>
+        <ScoreCard label="② 제구 (일관성)" score={ss.command.score}  grade={ss.command.grade}  accent="#a78bfa"/>
+        <ScoreCard label="③ 체력"           score={ss.fitness.score}  grade={ss.fitness.grade}  accent="#10b981"/>
+        <ScoreCard label="🏆 종합 평가"      score={ss.overall.score}  grade={ss.overall.grade}  accent="#5eead4"/>
+      </div>
+
+      {/* 우선순위 개선점 */}
+      {ss.priorities && ss.priorities.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--d-fg3)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 10 }}>
+            🎯 우선순위 개선점 ({ss.priorities.length}개)
+          </div>
+          {ss.priorities.map((p, i) => (
+            <PriorityFix key={i} rank={i + 1} kind={p.kind} title={p.title} detail={p.detail} action={p.action}/>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- COMMAND PROFILE PANEL ---------------- */
 function CommandProfilePanel({ cmd, energy, layback, factors }) {
   if (!cmd) return null;
   const { strikePct, plateSdCm, grade, breakdown, measured, note, isDemo, nTrials } = cmd;
@@ -1616,10 +1990,10 @@ function SinglePitcherView({ p }) {
         </span>
       </div>
 
-      {/* Hero — Video (full width) */}
-      <div style={{ marginBottom: 20 }}>
+      {/* Hero — Video Sequence Panel (추후 활성화 — VideoPanel 함수는 보존) */}
+      {/* <div style={{ marginBottom: 20 }}>
         <VideoPanel p={p}/>
-      </div>
+      </div> */}
 
       {/* KPI grid */}
       <div className="kpi-grid">
@@ -1775,6 +2149,22 @@ function SinglePitcherView({ p }) {
         </div>
       </SectionBlock>
 
+      {/* Section 05 — 키네틱 체인 & 정밀 지표 통합 분석 (files Section 5 포팅) */}
+      {p.kineticChain && (
+        <SectionBlock num="05" title="Kinetic Chain & Precision · 키네틱 체인 & 정밀 지표 통합 분석"
+          sub={`· 분절 운동에너지 · Transfer 비율 · Peak Power · Elbow Inverse Dynamics${p.energy?.leakPct ? ` · 종합 누수율 ${p.energy.leakPct}%` : ''}`}>
+          <KineticChainPanel kc={p.kineticChain}/>
+        </SectionBlock>
+      )}
+
+      {/* Section 06 — 구속 요인 종합 (5축 RadarChart + 영역별 카드) */}
+      {p.velocityRadar && p.velocityRadar.length > 0 && (
+        <SectionBlock num="06" title="Velocity Synthesis · 구속 요인 종합"
+          sub="· 5영역 종합 평가 — 드라이브라인 4모델 + ⭐ 키네틱 체인 효율 (우리 시스템 고유)">
+          <VelocityRadarPanel data={p.velocityRadar}/>
+        </SectionBlock>
+      )}
+
       {/* Section: Command Profile (7대 요인) */}
       <SectionBlock num="03" title="Command Mechanics · 제구 관련 메카닉스"
         sub="· 10구 메카닉 일관성 + 제구력 7대 요인 평가 · Uplift Labs 실측">
@@ -1796,6 +2186,22 @@ function SinglePitcherView({ p }) {
         )}
         <CommandProfilePanel cmd={p.command} energy={p.energy} layback={p.layback} factors={p.factors}/>
       </SectionBlock>
+
+      {/* Section D — 제구 일관성과 안정성 (5영역 ConsistencyCard 그룹) */}
+      {p.consistency && (
+        <SectionBlock num="D" title="Command Consistency · 제구 — 일관성과 안정성"
+          sub="· 매 투구 같은 위치로 던지는 능력 — 시기 간 변동(SD/CV)이 핵심">
+          <ConsistencyPanel cs={p.consistency}/>
+        </SectionBlock>
+      )}
+
+      {/* Section E — 종합 평가 (구속·제구·체력 점수 + 우선순위 개선점) */}
+      {p.summaryScores && (
+        <SectionBlock num="E" title="Comprehensive Evaluation · 종합 평가"
+          sub="· 구속 · 제구 · 체력 3축 종합 점수 + Mechanical Ceiling + 우선순위 개선점">
+          <SummaryScoresPanel ss={p.summaryScores}/>
+        </SectionBlock>
+      )}
 
       {/* Section: SW */}
       <SectionBlock num="04" title="Strengths & Weaknesses · 강점·약점"
@@ -1833,7 +2239,7 @@ function SinglePitcherView({ p }) {
       </SectionBlock>
 
       {/* Section: Flags — 항상 표시 (빈 경우 '특이사항 없음' 메시지) */}
-      <SectionBlock num="05" title="Check Points · 체크 포인트"
+      <SectionBlock num="05B" title="Check Points · 체크 포인트"
         sub="· 자동 규칙 엔진이 감지한 확인 필요 항목">
         {p.flags.length > 0 ? p.flags.map((f,i) => (
           <div className={`flag-item ${f.severity}`} key={i}>
@@ -3039,9 +3445,13 @@ function App({ onBack }) {
     { id: 'overview', label: 'Overview',     icon: Ic.home,     num: '00' },
     { id: 'physical', label: '구속 관련 체력', icon: Ic.body,     num: '01' },
     { id: 'mech',     label: '구속 관련 메카닉스', icon: Ic.motion,   num: '02' },
+    { id: 'kinetic',  label: '키네틱 체인 정밀',   icon: Ic.motion,   num: '05' },
+    { id: 'velSyn',   label: '구속 요인 종합',     icon: Ic.star,     num: '06' },
     { id: 'command',  label: '제구 관련 메카닉스', icon: Ic.flag,     num: '03' },
-    { id: 'sw',       label: '강점·약점',     icon: Ic.star,     num: '04' },
-    { id: 'flags',    label: '체크 포인트',   icon: Ic.flag,     num: '05' },
+    { id: 'consist',  label: '제구 일관성',        icon: Ic.flag,     num: 'D' },
+    { id: 'summary',  label: '종합 평가',          icon: Ic.star,     num: 'E' },
+    { id: 'sw',       label: '강점·약점',          icon: Ic.star,     num: '04' },
+    { id: 'flags',    label: '체크 포인트',        icon: Ic.flag,     num: '05B' },
   ];
 
   // Smooth scroll to section
@@ -3051,7 +3461,7 @@ function App({ onBack }) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    const numMap = { physical: '01', mech: '02', command: '03', sw: '04', flags: '05' };
+    const numMap = { physical: '01', mech: '02', command: '03', sw: '04', flags: '05B', kinetic: '05', velSyn: '06', consist: 'D', summary: 'E' };
     const targetNum = numMap[id];
     setTimeout(() => {
       const block = document.querySelector(`.section-block[data-section-num="${targetNum}"]`);

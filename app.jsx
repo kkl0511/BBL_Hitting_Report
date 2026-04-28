@@ -544,7 +544,8 @@
             </div>
           </div>
 
-          {/* SECTION 3 — 측정 영상 (선택) */}
+          {/* SECTION 3 — 측정 영상 (추후 활성화 — 코드 보존) */}
+          {false && (
           <div className="input-card">
             <div className="input-card-head">
               <span className="input-card-num">03</span>
@@ -616,6 +617,7 @@
               )}
             </div>
           </div>
+          )}
 
           {error && (
             <div className="input-error">
