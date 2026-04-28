@@ -1033,7 +1033,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
 
   return (
     <div className="energy-silhouette">
-      <svg viewBox="-140 0 1080 560" className="silhouette-svg" role="img" aria-label="키네틱 체인 통합 마네킹">
+      <svg viewBox="-210 0 1150 560" className="silhouette-svg" role="img" aria-label="키네틱 체인 통합 마네킹">
         <defs>
           <linearGradient id={`ik-bg-${uid}`} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0" stopColor="#0b1220" stopOpacity="0"/>
@@ -1318,7 +1318,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
             <line x1={K.rElbow[0] + 14} y1={K.rElbow[1] - 4} x2="612" y2="78" stroke={TONES[elbowTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
             <rect x="588" y="44" width="184" height="62" rx="6" fill="#0b1220" stroke={TONES[elbowTone].color} strokeOpacity="0.7"/>
             <text x="680" y="60" fill={TONES[elbowTone].color} fontSize="11" fontWeight="700" textAnchor="middle" letterSpacing="0.4">① 팔꿈치 부담</text>
-            <text x="680" y="80" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">{elbowEff.toFixed(2)} N·m/(m/s)</text>
+            <text x="680" y="80" fill={TONES[elbowTone].color} fontSize="15" fontWeight="800" textAnchor="middle">{elbowEff.toFixed(2)} N·m/(m/s)</text>
             <text x="680" y="98" fill={TONES[elbowTone].color} fontSize="10" textAnchor="middle">{TONES[elbowTone].text} · 낮을수록 좋음</text>
           </g>
         )}
@@ -1329,7 +1329,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
             <line x1={K.rShoulder[0] - 22} y1={K.rShoulder[1] - 4} x2="226" y2="78" stroke={TONES[shoulderTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
             <rect x="40" y="44" width="184" height="62" rx="6" fill="#0b1220" stroke={TONES[shoulderTone].color} strokeOpacity="0.7"/>
             <text x="132" y="60" fill={TONES[shoulderTone].color} fontSize="11" fontWeight="700" textAnchor="middle" letterSpacing="0.4">② 어깨 폭발력</text>
-            <text x="132" y="80" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">{cockPowerWPerKg.toFixed(1)} W/kg</text>
+            <text x="132" y="80" fill={TONES[shoulderTone].color} fontSize="15" fontWeight="800" textAnchor="middle">{cockPowerWPerKg.toFixed(1)} W/kg</text>
             <text x="132" y="98" fill={TONES[shoulderTone].color} fontSize="10" textAnchor="middle">{TONES[shoulderTone].text} · 높을수록 좋음</text>
           </g>
         )}
@@ -1340,7 +1340,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
             <line x1={K.rShoulder[0] + 22} y1={K.rShoulder[1] + 6} x2="612" y2="178" stroke={taC.color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
             <rect x="588" y="144" width="184" height="62" rx="6" fill="#0b1220" stroke={taC.color} strokeOpacity="0.7"/>
             <text x="680" y="160" fill={taC.color} fontSize="11" fontWeight="700" textAnchor="middle" letterSpacing="0.4">몸통→팔 전달 (T→A)</text>
-            <text x="680" y="180" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">ETI {etiTA.toFixed(2)}</text>
+            <text x="680" y="180" fill={taC.color} fontSize="15" fontWeight="800" textAnchor="middle">ETI {etiTA.toFixed(2)}</text>
             <text x="680" y="198" fill={taC.color} fontSize="10" fontWeight={taLeak ? 700 : 500} textAnchor="middle">
               {taC.label}
             </text>
@@ -1353,7 +1353,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
             <line x1={K.pelvisC[0] + 60} y1={K.pelvisC[1] - 60} x2="612" y2="266" stroke={TONES[trunkTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
             <rect x="588" y="232" width="184" height="62" rx="6" fill="#0b1220" stroke={TONES[trunkTone].color} strokeOpacity="0.7"/>
             <text x="680" y="248" fill={TONES[trunkTone].color} fontSize="11" fontWeight="700" textAnchor="middle" letterSpacing="0.4">③ 몸통→팔 힘 배율</text>
-            <text x="680" y="268" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">{transferTA_KE.toFixed(2)} 배</text>
+            <text x="680" y="268" fill={TONES[trunkTone].color} fontSize="15" fontWeight="800" textAnchor="middle">{transferTA_KE.toFixed(2)} 배</text>
             <text x="680" y="286" fill={TONES[trunkTone].color} fontSize="10" textAnchor="middle">{TONES[trunkTone].text} · 클수록 좋음</text>
           </g>
         )}
@@ -1364,7 +1364,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
             <line x1={K.pelvisC[0] - 30} y1={K.pelvisC[1] - 30} x2="226" y2="158" stroke={ptC.color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
             <rect x="40" y="124" width="184" height="62" rx="6" fill="#0b1220" stroke={ptC.color} strokeOpacity="0.7"/>
             <text x="132" y="140" fill={ptC.color} fontSize="11" fontWeight="700" textAnchor="middle" letterSpacing="0.4">골반→몸통 전달 (P→T)</text>
-            <text x="132" y="160" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">ETI {etiPT.toFixed(2)}</text>
+            <text x="132" y="160" fill={ptC.color} fontSize="15" fontWeight="800" textAnchor="middle">ETI {etiPT.toFixed(2)}</text>
             <text x="132" y="178" fill={ptC.color} fontSize="10" fontWeight={ptLeak ? 700 : 500} textAnchor="middle">
               {ptC.label}
             </text>
@@ -1402,7 +1402,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
             <line x1={K.lKnee[0] - 8} y1={K.lKnee[1] - 4} x2="240" y2="350" stroke={TONES[kneeCollapseTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
             <rect x="40" y="320" width="218" height="62" rx="6" fill="#0b1220" stroke={TONES[kneeCollapseTone].color} strokeOpacity="0.7"/>
             <text x="149" y="336" fill={TONES[kneeCollapseTone].color} fontSize="11" fontWeight="700" textAnchor="middle" letterSpacing="0.4">무릎 무너짐</text>
-            <text x="149" y="356" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">
+            <text x="149" y="356" fill={TONES[kneeCollapseTone].color} fontSize="15" fontWeight="800" textAnchor="middle">
               {kneeCollapseDeg > 0 ? '+' : ''}{kneeCollapseDeg.toFixed(1)}°
             </text>
             <text x="149" y="374" fill={TONES[kneeCollapseTone].color} fontSize="10" textAnchor="middle">
@@ -1420,7 +1420,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
             <line x1={K.lKnee[0] - 4} y1={K.lKnee[1] + 4} x2="258" y2="430" stroke={TONES[kneeSscTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
             <rect x="40" y="398" width="218" height="62" rx="6" fill="#0b1220" stroke={TONES[kneeSscTone].color} strokeOpacity="0.7"/>
             <text x="149" y="414" fill={TONES[kneeSscTone].color} fontSize="11" fontWeight="700" textAnchor="middle" letterSpacing="0.4">무릎 SSC 활용</text>
-            <text x="149" y="434" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">
+            <text x="149" y="434" fill={TONES[kneeSscTone].color} fontSize="15" fontWeight="800" textAnchor="middle">
               {kneeSscMs.toFixed(0)} ms
             </text>
             <text x="149" y="452" fill={TONES[kneeSscTone].color} fontSize="10" textAnchor="middle">
@@ -1439,56 +1439,42 @@ function IntegratedKineticDiagram({ energy, precision }) {
           </g>
         )}
 
-        {/* ⭐ v8 — LEFT-MID: 플라잉오픈 (골반-몸통 전달 근처) */}
+        {/* ⭐ v15 — LEFT-OUTER: 플라잉오픈 (사용자 요청: 더 왼쪽으로 이동) */}
         {flyingOpenDeg != null && (
           <g>
-            <line x1={K.pelvisC[0] - 30} y1={K.pelvisC[1] - 10} x2="40" y2="240" stroke={TONES[flyingOpenTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
-            <rect x="-130" y="220" width="200" height="64" rx="6" fill="#0b1220" stroke={TONES[flyingOpenTone].color} strokeOpacity="0.7"/>
-            <text x="-30" y="238" fill={TONES[flyingOpenTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">플라잉오픈 (FC)</text>
-            <text x="-30" y="258" fill="#e2e8f0" fontSize="14" fontWeight="800" textAnchor="middle">
+            <line x1={K.pelvisC[0] - 30} y1={K.pelvisC[1] - 10} x2="0" y2="240" stroke={TONES[flyingOpenTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
+            <rect x="-200" y="220" width="200" height="64" rx="6" fill="#0b1220" stroke={TONES[flyingOpenTone].color} strokeOpacity="0.7"/>
+            <text x="-100" y="238" fill={TONES[flyingOpenTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">플라잉오픈 (FC)</text>
+            <text x="-100" y="258" fill={TONES[flyingOpenTone].color} fontSize="14" fontWeight="800" textAnchor="middle">
               {flyingOpenDeg.toFixed(1)}°
             </text>
-            <text x="-30" y="276" fill={TONES[flyingOpenTone].color} fontSize="9.5" textAnchor="middle">
+            <text x="-100" y="276" fill={TONES[flyingOpenTone].color} fontSize="9.5" textAnchor="middle">
               {TONES[flyingOpenTone].text} · 작을수록 ↑
             </text>
           </g>
         )}
 
-        {/* ⭐ v10 — RIGHT-TOP: FC 시점 몸통 자세 (상체 근처, 사용자 요청)
-            직립 또는 약간 뒤로 젖힌 상태(음수)가 좋음
-            연결선: 어깨 → 카드 (상체 영역) */}
+        {/* ⭐ v15 — LEFT-OUTER (플라잉오픈 바로 밑): 몸통 굴곡 @FC (사용자 요청: 이름 변경 + 좌측으로 이동)
+            직립 또는 약간 뒤로 젖힌 상태(음수)가 좋음 */}
         {trunkFlexAtFCDeg != null && (
           <g>
-            <line x1={K.rShoulder[0] + 24} y1={K.rShoulder[1] - 6} x2="822" y2="120" stroke={TONES[trunkFlexAtFCTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
-            <rect x="788" y="92" width="200" height="76" rx="6" fill="#0b1220" stroke={TONES[trunkFlexAtFCTone].color} strokeOpacity="0.7"/>
-            <text x="888" y="110" fill={TONES[trunkFlexAtFCTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">FC 몸통 자세</text>
-            <text x="888" y="131" fill="#e2e8f0" fontSize="15" fontWeight="800" textAnchor="middle">
+            <line x1={K.pelvisC[0] - 30} y1={K.pelvisC[1]} x2="0" y2="336" stroke={TONES[trunkFlexAtFCTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
+            <rect x="-200" y="298" width="200" height="76" rx="6" fill="#0b1220" stroke={TONES[trunkFlexAtFCTone].color} strokeOpacity="0.7"/>
+            <text x="-100" y="316" fill={TONES[trunkFlexAtFCTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">몸통 굴곡 @FC</text>
+            <text x="-100" y="337" fill={TONES[trunkFlexAtFCTone].color} fontSize="15" fontWeight="800" textAnchor="middle">
               {trunkFlexAtFCDeg > 0 ? '+' : ''}{trunkFlexAtFCDeg.toFixed(1)}°
             </text>
-            <text x="888" y="148" fill={TONES[trunkFlexAtFCTone].color} fontSize="9.5" textAnchor="middle">
+            <text x="-100" y="354" fill={TONES[trunkFlexAtFCTone].color} fontSize="9.5" textAnchor="middle">
               {trunkFlexAtFCDeg <= -5 ? '뒤로 젖힘 · 우수'
                 : trunkFlexAtFCDeg <= 5  ? '직립 · 양호'
                 : trunkFlexAtFCDeg <= 15 ? '약간 앞으로'
                 : '이미 앞으로 무너짐'}
             </text>
-            <text x="888" y="161" fill="#64748b" fontSize="8.5" textAnchor="middle">앞발 착지 시점 · 직립~음수 이상적</text>
+            <text x="-100" y="367" fill="#64748b" fontSize="8.5" textAnchor="middle">앞발 착지 · 직립~음수 이상적</text>
           </g>
         )}
 
-        {/* ⭐ v8 — RIGHT-MID: 릴리즈 시 몸통 전방 굴곡 (몸통-팔 전달 근처) */}
-        {trunkFlexAtBRDeg != null && (
-          <g>
-            <line x1={K.trunkC[0] + 12} y1={K.trunkC[1] + 14} x2="822" y2="220" stroke={TONES[trunkFlexTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
-            <rect x="788" y="200" width="200" height="64" rx="6" fill="#0b1220" stroke={TONES[trunkFlexTone].color} strokeOpacity="0.7"/>
-            <text x="888" y="218" fill={TONES[trunkFlexTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">릴리즈 몸통 굴곡</text>
-            <text x="888" y="238" fill="#e2e8f0" fontSize="14" fontWeight="800" textAnchor="middle">
-              {trunkFlexAtBRDeg.toFixed(1)}°
-            </text>
-            <text x="888" y="256" fill={TONES[trunkFlexTone].color} fontSize="9.5" textAnchor="middle">
-              {TONES[trunkFlexTone].text} · 35-45° 정상
-            </text>
-          </g>
-        )}
+        {/* v15 — 릴리즈 몸통 굴곡 카드 삭제됨 (사용자 요청) */}
 
         {/* === Joint markers (key kinematic points) === */}
         <g style={{ pointerEvents: 'none' }}>
@@ -1512,23 +1498,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
           ))}
         </g>
       </svg>
-      <div className="silhouette-legend">
-        <div className="leg-item">
-          <span style={{ display:'inline-block', width:14, height:14, borderRadius:3, background:'linear-gradient(90deg,#3b82f6,#a78bfa,#ef4444)', marginRight:6 }}/>
-          <b>에너지 흐름:</b> <span style={{color:'#3b82f6'}}>파랑=좋음</span> · <span style={{color:'#a78bfa'}}>보라=보통</span> · <span style={{color:'#ef4444'}}>빨강=나쁨</span>
-        </div>
-        <div className="leg-item"><span className="dot" style={{ background: ptC.color }}/>골반→몸통 ({ptC.label})</div>
-        <div className="leg-item"><span className="dot" style={{ background: taC.color }}/>몸통→팔 ({taC.label})</div>
-        <div className="leg-item"><span className="dot" style={{ background: TONES[elbowTone].color }}/>① 팔꿈치 부담</div>
-        <div className="leg-item"><span className="dot" style={{ background: TONES[shoulderTone].color }}/>② 어깨 폭발력</div>
-        <div className="leg-item"><span className="dot" style={{ background: '#3b82f6' }}/>축발 · <span className="dot" style={{ background: '#a855f7', marginLeft: 6 }}/>디딤발</div>
-        <div className="leg-item">
-          <span style={{ display:'inline-block', width:9, height:9, borderRadius:'50%', background:'#fbbf24', border:'1.5px solid #fff', marginRight:4 }}/>던지는 팔 관절
-          <span style={{ display:'inline-block', width:9, height:9, borderRadius:'50%', background:'#22d3ee', border:'1.5px solid #fff', marginLeft:8, marginRight:4 }}/>그 외 관절
-          <span style={{ display:'inline-block', width:9, height:9, borderRadius:'50%', background:'#a78bfa', border:'1.5px solid #fff', marginLeft:8, marginRight:4 }}/>골반
-        </div>
-        <div className="leg-item note">색띠 두께·진하기 = 에너지 흐름 강도 · 카드 색 = 해당 변인의 평가 결과</div>
-      </div>
+      {/* v15 — 마네킹 하단 범례 모두 제거 (사용자 요청) */}
     </div>
   );
 }
