@@ -1126,6 +1126,16 @@ function ExpectedVelocityPanel({ p }) {
 // 학술 변인 설명 박스 — 정의/의미/해석/판단 (펼치기/접기)
 function InfoBox({ items }) {
   const [open, setOpen] = useState(false);
+  // def / meaning / interpret / judge → 단일 통합 본문으로 결합
+  function joinBody(it) {
+    if (it.body) return it.body;  // 새 형식: body 필드만 사용
+    const parts = [];
+    if (it.def)       parts.push(it.def);
+    if (it.meaning)   parts.push(it.meaning);
+    if (it.interpret) parts.push(it.interpret);
+    if (it.judge)     parts.push(it.judge);
+    return parts.join(' ');
+  }
   return (
     <div style={{ marginTop: 10, border: '1px solid var(--d-border)', borderRadius: 6, overflow: 'hidden' }}>
       <button onClick={() => setOpen(!open)} style={{
@@ -1134,38 +1144,17 @@ function InfoBox({ items }) {
         background: 'rgba(96,165,250,0.06)', color: '#60a5fa',
         fontSize: 11.5, fontWeight: 700, cursor: 'pointer', border: 'none', fontFamily: 'inherit'
       }} className="info-toggle">
-        <span>📖 정의 · 의미 · 해석 · 판단 방법</span>
+        <span>📖 변인 설명</span>
         <span style={{ color: 'var(--d-fg3)' }}>{open ? '▲ 접기' : '▼ 펼치기'}</span>
       </button>
       {open && (
         <div style={{ padding: 12, background: 'var(--d-bg2)', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {items.map((it, i) => (
             <div key={i} style={{ borderLeft: '2px solid #60a5fa', paddingLeft: 10 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--d-fg1)', marginBottom: 4 }}>{it.term}</div>
-              {it.def && (
-                <div style={{ fontSize: 11.5, lineHeight: 1.55, marginBottom: 3 }}>
-                  <span style={{ color: '#93c5fd', fontWeight: 600 }}>정의 · </span>
-                  <span style={{ color: 'var(--d-fg2)' }}>{it.def}</span>
-                </div>
-              )}
-              {it.meaning && (
-                <div style={{ fontSize: 11.5, lineHeight: 1.55, marginBottom: 3 }}>
-                  <span style={{ color: '#93c5fd', fontWeight: 600 }}>투구에서의 의미 · </span>
-                  <span style={{ color: 'var(--d-fg2)' }}>{it.meaning}</span>
-                </div>
-              )}
-              {it.interpret && (
-                <div style={{ fontSize: 11.5, lineHeight: 1.55, marginBottom: 3 }}>
-                  <span style={{ color: '#93c5fd', fontWeight: 600 }}>해석 · </span>
-                  <span style={{ color: 'var(--d-fg2)' }}>{it.interpret}</span>
-                </div>
-              )}
-              {it.judge && (
-                <div style={{ fontSize: 11.5, lineHeight: 1.55 }}>
-                  <span style={{ color: '#93c5fd', fontWeight: 600 }}>판단 기준 · </span>
-                  <span style={{ color: 'var(--d-fg2)' }}>{it.judge}</span>
-                </div>
-              )}
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--d-fg1)', marginBottom: 6 }}>{it.term}</div>
+              <div style={{ fontSize: 11.5, lineHeight: 1.7, color: 'var(--d-fg2)' }}>
+                {joinBody(it)}
+              </div>
             </div>
           ))}
         </div>
@@ -1558,6 +1547,9 @@ function SummaryScoresPanel({ ss }) {
         <ScoreCard label="🏆 종합 평가"      score={ss.overall.score}  grade={ss.overall.grade}  accent="#5eead4"/>
       </div>
 
+      {/* 점수 산출 근거 (사용자 요청 — 어떻게 점수가 나왔는지 투명하게 표시) */}
+      <ScoreSourcesPanel ss={ss}/>
+
       {/* 우선순위 개선점 */}
       {ss.priorities && ss.priorities.length > 0 && (
         <div>
@@ -1567,6 +1559,83 @@ function SummaryScoresPanel({ ss }) {
           {ss.priorities.map((p, i) => (
             <PriorityFix key={i} rank={i + 1} kind={p.kind} title={p.title} detail={p.detail} action={p.action}/>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- 점수 산출 근거 패널 ---------------- */
+function ScoreSourcesPanel({ ss }) {
+  const [open, setOpen] = useState(false);
+  const groups = [
+    { key: 'velocity', label: '① 구속 (메카닉)', accent: '#f59e0b', score: ss.velocity.score, grade: ss.velocity.grade, sources: ss.velocity.sources, weight: '40%', desc: '평균 구속·몸통 각속도·MER·CoG 등 8개 변인을 한국 고1 우수 baseline으로 정규화한 가중평균' },
+    { key: 'command',  label: '② 제구 (일관성)', accent: '#a78bfa', score: ss.command.score,  grade: ss.command.grade,  sources: ss.command.sources,  weight: '30%', desc: '5개 변인의 시기 간 변동(CV/SD)을 0-100 점수로 변환한 가중평균. 작을수록 좋음' },
+    { key: 'fitness',  label: '③ 체력',          accent: '#10b981', score: ss.fitness.score,  grade: ss.fitness.grade,  sources: ss.fitness.sources,  weight: '30%', desc: 'BBL 메타 CSV 기반 6개 항목의 band(상위/범위/미만)를 점수화 (high=95 / mid=70 / low=40)' }
+  ];
+  if (!groups.some(g => g.sources && g.sources.length > 0)) return null;
+  return (
+    <div style={{ border: '1px solid var(--d-border)', borderRadius: 8, overflow: 'hidden' }}>
+      <button onClick={() => setOpen(!open)} style={{
+        width: '100%', textAlign: 'left', padding: '10px 14px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(96,165,250,0.06)', color: '#60a5fa',
+        fontSize: 12, fontWeight: 700, cursor: 'pointer', border: 'none', fontFamily: 'inherit'
+      }}>
+        <span>📊 점수 산출 근거 (투명한 계산식)</span>
+        <span style={{ color: 'var(--d-fg3)' }}>{open ? '▲ 접기' : '▼ 펼치기'}</span>
+      </button>
+      {open && (
+        <div style={{ padding: 14, background: 'var(--d-bg2)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {groups.map(g => g.sources && g.sources.length > 0 && (
+            <div key={g.key} style={{ borderLeft: `3px solid ${g.accent}`, paddingLeft: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: g.accent, marginBottom: 4 }}>
+                {g.label}: <span style={{ color: 'var(--d-fg1)' }}>{g.score}/100 ({g.grade})</span>
+                <span style={{ fontSize: 10, color: 'var(--d-fg3)', marginLeft: 8, fontWeight: 500 }}>· 종합 가중치 {g.weight}</span>
+              </div>
+              <div style={{ fontSize: 10.5, color: 'var(--d-fg3)', marginBottom: 8, lineHeight: 1.5 }}>{g.desc}</div>
+              <table style={{ width: '100%', fontSize: 11, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--d-border)', color: 'var(--d-fg3)', fontSize: 10 }}>
+                    <th style={{ textAlign: 'left', padding: '4px 6px', fontWeight: 600 }}>변인</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', fontWeight: 600 }}>측정값</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', fontWeight: 600 }}>점수</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', fontWeight: 600 }}>가중치</th>
+                    <th style={{ textAlign: 'right', padding: '4px 6px', fontWeight: 600 }}>기여</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {g.sources.map((s, i) => {
+                    const contribution = (s.score * s.weight).toFixed(1);
+                    const scoreColor = s.score >= 80 ? '#10b981' : s.score >= 65 ? '#84cc16' : s.score >= 50 ? '#f59e0b' : '#ef4444';
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px dashed var(--d-border)' }}>
+                        <td style={{ padding: '5px 6px', color: 'var(--d-fg2)' }}>
+                          {s.name}
+                          {s.bandLabel && <span style={{ fontSize: 9, color: 'var(--d-fg3)', marginLeft: 4 }}>({s.bandLabel})</span>}
+                        </td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: 'var(--d-fg2)', fontFamily: 'Inter' }}>
+                          {s.value}{s.unit ? ` ${s.unit}` : ''}
+                        </td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', fontFamily: 'Inter', fontWeight: 700, color: scoreColor }}>
+                          {s.score}
+                        </td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: 'var(--d-fg3)', fontFamily: 'Inter' }}>
+                          {(s.weight * 100).toFixed(0)}%
+                        </td>
+                        <td style={{ padding: '5px 6px', textAlign: 'right', color: 'var(--d-fg2)', fontFamily: 'Inter' }}>
+                          {contribution}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))}
+          <div style={{ fontSize: 10.5, color: 'var(--d-fg3)', lineHeight: 1.6, padding: 10, background: 'rgba(0,0,0,0.2)', borderRadius: 4 }}>
+            <b style={{ color: '#fbbf24' }}>종합 평가 계산:</b> 구속 점수 × 0.40 + 제구 점수 × 0.30 + 체력 점수 × 0.30. 일부 변인이 측정 불가능한 경우 해당 변인을 제외하고 가중치를 재정규화합니다.
+          </div>
         </div>
       )}
     </div>

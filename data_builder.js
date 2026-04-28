@@ -517,13 +517,25 @@
   //   - peakPivotHipVel / peakStrideHipVel:  pivot vs stride hip joint vel
   // ═════════════════════════════════════════════════════════════════
   function buildPrecision(sm) {
+    // 무릎 무너짐 = FC→BR 굴곡 변화량
+    const kneeCollapse = (sm.kneeFlexionAtFC?.mean != null && sm.kneeFlexionAtBR?.mean != null)
+      ? r1(sm.kneeFlexionAtFC.mean - sm.kneeFlexionAtBR.mean)  // 양수=무너짐
+      : null;
+    // SSC: 우리 시스템에서 직접 계산되지 않으면 null (RSI-mod 등으로 추정 가능)
     return {
       elbowEff:         sm.elbowLoadEfficiency?.mean ?? null,
       cockPowerWPerKg:  sm.cockingPhaseArmPowerWPerKg?.mean ?? null,
       transferTA_KE:    sm.transferTA_KE?.mean ?? null,
       legAsymmetry:     sm.legAsymmetryRatio?.mean ?? null,
       peakPivotHipVel:  sm.peakPivotHipVel?.mean ?? null,
-      peakStrideHipVel: sm.peakStrideHipVel?.mean ?? null
+      peakStrideHipVel: sm.peakStrideHipVel?.mean ?? null,
+      // ⭐ v8 — 신규 (마네킹 카드 표시용)
+      kneeCollapseDeg:  kneeCollapse,                              // 무릎 무너짐 (양수=무너짐)
+      kneeSscMs:        sm.kneeSscDurationMs?.mean ?? null,        // SSC 전환 시간
+      flyingOpenDeg:    sm.trunkRotAtFP?.mean ?? null,             // 플라잉오픈 (FC 시점 trunk 회전)
+      trunkFlexAtBRDeg: sm.trunkForwardTilt?.mean != null
+                          ? Math.abs(sm.trunkForwardTilt.mean)
+                          : null                                    // 릴리즈 시 몸통 굴곡
     };
   }
 
@@ -791,92 +803,132 @@
     return 'F';
   }
   function calcVelocityScore(sm, energy) {
-    // ─── 한국 고교 우수 투수 기준 (50점 = 잘함, 80점 = 우수, 100점 = 엘리트) ───
-    // 변경 전(MLB elite 기준)에서 변경 후(한국 고1 우수 기준)로 baseline 통일
-    // 이로써 분절 회전 속도의 band(REF) 평가와 점수 평가가 일관됨
+    // ─── 한국 고교 우수 투수 기준 (band 평가와 점수 평가의 일관성 확보) ───
+    // band low/mid/high 경계가 점수 30/60/85에 매핑되도록 piecewise 함수 사용
+    // 평균 구속 130(고1평균)→60점, 145(우수)→80점, 155(엘리트)→95점
+    function pwLinear(val, anchors) {
+      // anchors: [[x0,y0],[x1,y1],...] 정렬된 배열
+      if (val == null || isNaN(val)) return null;
+      if (val <= anchors[0][0]) return Math.max(0, anchors[0][1] * (val / anchors[0][0]));
+      for (let i = 1; i < anchors.length; i++) {
+        if (val <= anchors[i][0]) {
+          const [x0, y0] = anchors[i-1], [x1, y1] = anchors[i];
+          return y0 + (val - x0) / (x1 - x0) * (y1 - y0);
+        }
+      }
+      const last = anchors[anchors.length - 1];
+      return Math.min(100, last[1] + (val - last[0]) * 0.05);
+    }
     const parts = [];
-    const push = (w, v) => { if (Number.isFinite(v)) parts.push({ w, v }); };
-    // 평균 구속 (35%) — 130 km/h = 50점, 145 km/h = 80점, 155 km/h = 100점
+    const sources = [];  // 점수 산출 근거
+    function push(name, w, val, anchors, unit) {
+      const score = pwLinear(val, anchors);
+      if (Number.isFinite(score)) {
+        parts.push({ w, v: score });
+        sources.push({ name, weight: w, value: val, unit, score: Math.round(score) });
+      }
+    }
+    // 평균 구속 (35%)
     if (sm.velocity?.mean != null) {
-      const v = sm.velocity.mean;
-      push(0.35, Math.max(0, Math.min(100, (v - 100) * 2.0)));
+      push('평균 구속', 0.35, sm.velocity.mean, [[100,0],[130,60],[145,80],[155,95]], 'km/h');
     }
-    // 몸통 회전 속도 (20%) — 한국 고1 우수 850°/s = 80점, 600 = 0, 1100 = 100
+    // 몸통 각속도 (20%) — band 평가와 일관: 750=mid 시작=60점, 900=mid 끝=85점
     if (sm.peakTrunkVel?.mean != null) {
-      push(0.20, Math.max(0, Math.min(100, (sm.peakTrunkVel.mean - 600) / 5)));
+      push('몸통 각속도', 0.20, sm.peakTrunkVel.mean, [[600,30],[750,60],[900,85],[1050,100]], '°/s');
     }
-    // MER / Layback (13%) — 165° = 50점, 180° = 80점, 195° = 100점
+    // MER (13%) — 130=low, 165-180=mid, 180+=high
     if (sm.maxER?.mean != null) {
-      push(0.13, Math.max(0, Math.min(100, (sm.maxER.mean - 130) * 1.54)));
+      push('MER (어깨 외회전)', 0.13, sm.maxER.mean, [[130,30],[165,65],[180,85],[195,98]], '°');
     }
-    // CoG 감속 능력 (10%) — files Driveline weight 0.70
+    // CoG 감속 (10%) — 1.0=mid 시작, 1.6=elite
     if (sm.cogDecel?.mean != null) {
-      push(0.10, Math.max(0, Math.min(100, sm.cogDecel.mean * 50)));
+      push('CoG 감속능력', 0.10, sm.cogDecel.mean, [[0.5,20],[1.0,55],[1.4,75],[1.8,95]], 'm/s');
     }
-    // 앞다리 신전 BR (8%)
+    // Lead knee BR (8%)
     if (sm.leadKneeExtAtBR?.mean != null) {
-      push(0.08, Math.max(0, Math.min(100, (sm.leadKneeExtAtBR.mean + 10) * 4)));
+      push('앞다리 신전 (BR)', 0.08, sm.leadKneeExtAtBR.mean, [[-15,15],[0,50],[10,75],[20,95]], '°');
     }
-    // 스트라이드 비율 (5%)
+    // Stride ratio (5%)
     if (sm.strideRatio?.mean != null && Number.isFinite(sm.strideRatio.mean)) {
-      push(0.05, Math.max(0, Math.min(100, (sm.strideRatio.mean - 0.6) * 250)));
+      push('스트라이드 비율', 0.05, sm.strideRatio.mean, [[0.5,15],[0.8,55],[1.0,80],[1.2,95]], '×height');
     }
-    // 팔 회전 속도 (5%) — 한국 고1 우수 1450°/s = 50점, 1600 = 80점, 1900 = 100점
+    // 팔 각속도 (5%) — 한국 고1 우수 1350-1550 mid 범위
     if (sm.peakArmVel?.mean != null) {
-      push(0.05, Math.max(0, Math.min(100, (sm.peakArmVel.mean - 1100) / 8)));
+      push('팔 각속도', 0.05, sm.peakArmVel.mean, [[1100,30],[1350,60],[1550,85],[1800,100]], '°/s');
     }
-    // 에너지 전달 (4%) — files 그대로
+    // ETI 합산 (4%)
     if (sm.etiPT?.mean != null && sm.etiTA?.mean != null) {
       const e = (Math.min(100, (sm.etiPT.mean - 0.7) * 80) + Math.min(100, (sm.etiTA.mean - 0.8) * 75)) / 2;
-      push(0.04, Math.max(0, e));
+      const score = Math.max(0, e);
+      parts.push({ w: 0.04, v: score });
+      sources.push({ name: 'ETI 평균 (P→T·T→A)', weight: 0.04, value: ((sm.etiPT.mean + sm.etiTA.mean)/2).toFixed(2), unit: '×', score: Math.round(score) });
     }
-    if (parts.length === 0) return null;
+    if (parts.length === 0) return { score: null, sources: [] };
     const totalW = parts.reduce((s, p) => s + p.w, 0);
-    if (totalW === 0) return null;
+    if (totalW === 0) return { score: null, sources: [] };
     const score = parts.reduce((s, p) => s + p.v * p.w, 0) / totalW;
-    return Number.isFinite(score) ? score : null;
+    return Number.isFinite(score) ? { score, sources } : { score: null, sources };
   }
   function calcCommandScore(sm) {
     const parts = [];
-    if (sm.fcBrMs?.cv != null) {
-      parts.push({ w: 0.30, v: Math.max(0, Math.min(100, 100 - sm.fcBrMs.cv * 10)) });
+    const sources = [];
+    function pushCV(name, w, cvVal, multiplier, unit) {
+      if (cvVal == null) return;
+      const score = Math.max(0, Math.min(100, 100 - cvVal * multiplier));
+      parts.push({ w, v: score });
+      sources.push({ name, weight: w, value: cvVal.toFixed(1), unit, score: Math.round(score) });
     }
-    if (sm.strideLength?.cv != null) {
-      parts.push({ w: 0.20, v: Math.max(0, Math.min(100, 100 - sm.strideLength.cv * 12)) });
+    function pushSD(name, w, sdVal, multiplier, unit) {
+      if (sdVal == null) return;
+      const score = Math.max(0, Math.min(100, 100 - sdVal * multiplier));
+      parts.push({ w, v: score });
+      sources.push({ name, weight: w, value: sdVal.toFixed(2), unit, score: Math.round(score) });
     }
-    if (sm.maxER?.cv != null) {
-      parts.push({ w: 0.20, v: Math.max(0, Math.min(100, 100 - sm.maxER.cv * 6)) });
-    }
-    if (sm.trunkForwardTilt?.sd != null) {
-      parts.push({ w: 0.15, v: Math.max(0, Math.min(100, 100 - sm.trunkForwardTilt.sd * 12)) });
-    }
-    if (sm.armSlotAngle?.sd != null) {
-      parts.push({ w: 0.15, v: Math.max(0, Math.min(100, 100 - sm.armSlotAngle.sd * 15)) });
-    }
-    if (parts.length === 0) return null;
+    pushCV('FC→릴리스 시간 일관성', 0.30, sm.fcBrMs?.cv, 10, 'CV%');
+    pushCV('스트라이드 길이 일관성', 0.20, sm.strideLength?.cv, 12, 'CV%');
+    pushCV('Max ER 일관성',         0.20, sm.maxER?.cv, 6, 'CV%');
+    pushSD('몸통 전방기울기 SD',    0.15, sm.trunkForwardTilt?.sd, 12, '°');
+    pushSD('Arm slot 각도 SD',      0.15, sm.armSlotAngle?.sd, 15, '°');
+    if (parts.length === 0) return { score: null, sources: [] };
     const totalW = parts.reduce((s, p) => s + p.w, 0);
-    return parts.reduce((s, p) => s + p.v * p.w, 0) / totalW;
+    const score = parts.reduce((s, p) => s + p.v * p.w, 0) / totalW;
+    return { score, sources };
   }
   // 체력 점수 — BBL 메타 CSV 기반 (band → 점수 변환)
   function calcFitnessScore(physical) {
-    if (!physical) return null;
-    // band 점수 — high(95) / mid(70) / low(40) — 한국 고교 기준 우수자가 90+ 받도록
+    if (!physical) return { score: null, sources: [] };
     const bandToScore = { high: 95, mid: 70, low: 40, na: null };
+    const bandLabel = { high: '상위', mid: '범위', low: '미만', na: '—' };
     const components = [
-      { w: 0.25, v: bandToScore[physical.cmjPower?.band] ?? null,    name: '폭발력 (CMJ)' },
-      { w: 0.20, v: bandToScore[physical.maxStrength?.band] ?? null, name: '최대근력 (IMTP)' },
-      { w: 0.20, v: bandToScore[physical.reactive?.band] ?? null,    name: '반응성 (RSI-mod)' },
-      { w: 0.15, v: bandToScore[physical.ssc?.band] ?? null,         name: '탄성 활용 (EUR)' },
-      { w: 0.10, v: bandToScore[physical.release?.band] ?? null,     name: '악력' },
-      // SJ 단위파워 — 25 W/kg = 0, 38 = 50, 50 = 95
-      { w: 0.10, v: physical.cmjPower?.sj != null
-                    ? Math.max(0, Math.min(100, (physical.cmjPower.sj - 25) * 3.8)) : null,
-        name: '정지폭발 (SJ)' }
+      { w: 0.25, v: bandToScore[physical.cmjPower?.band] ?? null,    name: '폭발력 (CMJ 단위파워)',
+        rawValue: physical.cmjPower?.cmj, rawBand: physical.cmjPower?.band, unit: 'W/kg' },
+      { w: 0.20, v: bandToScore[physical.maxStrength?.band] ?? null, name: '최대근력 (IMTP 단위근력)',
+        rawValue: physical.maxStrength?.perKg, rawBand: physical.maxStrength?.band, unit: 'N/kg' },
+      { w: 0.20, v: bandToScore[physical.reactive?.band] ?? null,    name: '반응성 (RSI-mod)',
+        rawValue: physical.reactive?.cmj, rawBand: physical.reactive?.band, unit: 'm/s' },
+      { w: 0.15, v: bandToScore[physical.ssc?.band] ?? null,         name: '탄성 활용 (EUR)',
+        rawValue: physical.ssc?.value, rawBand: physical.ssc?.band, unit: '' },
+      { w: 0.10, v: bandToScore[physical.release?.band] ?? null,     name: '악력 (Release Power)',
+        rawValue: physical.release?.value, rawBand: physical.release?.band, unit: '' },
+      { w: 0.10,
+        v: physical.cmjPower?.sj != null ? Math.max(0, Math.min(100, (physical.cmjPower.sj - 25) * 3.8)) : null,
+        name: '정지폭발 (SJ 단위파워)',
+        rawValue: physical.cmjPower?.sj, rawBand: null, unit: 'W/kg' }
     ];
     const valid = components.filter(c => c.v != null);
-    if (valid.length === 0) return null;
+    if (valid.length === 0) return { score: null, sources: [] };
     const totalW = valid.reduce((s, c) => s + c.w, 0);
-    return valid.reduce((s, c) => s + c.v * c.w, 0) / totalW;
+    const score = valid.reduce((s, c) => s + c.v * c.w, 0) / totalW;
+    const sources = valid.map(c => ({
+      name: c.name,
+      weight: c.w,
+      value: c.rawValue != null ? c.rawValue : '—',
+      unit: c.unit,
+      band: c.rawBand,
+      bandLabel: c.rawBand ? bandLabel[c.rawBand] : null,
+      score: Math.round(c.v)
+    }));
+    return { score, sources };
   }
   // 우선순위 개선점 (체력 + 메카닉 + 일관성 통합)
   // ※ 임계값은 한국 고교 우수 baseline 기준으로 조정 — band 평가와 일관성 확보
@@ -987,9 +1039,12 @@
     };
   }
   function buildSummaryScores(sm, energy, physical) {
-    const velocity = calcVelocityScore(sm, energy);
-    const command  = calcCommandScore(sm);
-    const fitness  = calcFitnessScore(physical);
+    const velObj = calcVelocityScore(sm, energy);
+    const cmdObj = calcCommandScore(sm);
+    const fitObj = calcFitnessScore(physical);
+    const velocity = velObj.score;
+    const command  = cmdObj.score;
+    const fitness  = fitObj.score;
     // 종합 — 3축 가중 평균 (구속 40%, 제구 30%, 체력 30%)
     let overall = null;
     const validParts = [];
@@ -1003,9 +1058,9 @@
     const ceiling = calcMechanicalCeiling(sm, velocity);
     const priorities = generatePriorities({ velocity, command, fitness }, sm, energy, physical);
     return {
-      velocity:    { score: r0(velocity), grade: scoreToGrade(velocity) },
-      command:     { score: r0(command),  grade: scoreToGrade(command) },
-      fitness:     { score: r0(fitness),  grade: scoreToGrade(fitness) },
+      velocity:    { score: r0(velocity), grade: scoreToGrade(velocity), sources: velObj.sources },
+      command:     { score: r0(command),  grade: scoreToGrade(command),  sources: cmdObj.sources },
+      fitness:     { score: r0(fitness),  grade: scoreToGrade(fitness),  sources: fitObj.sources },
       overall:     { score: r0(overall),  grade: scoreToGrade(overall) },
       ceiling,
       priorities
@@ -1031,6 +1086,7 @@
   // ═════════════════════════════════════════════════════════════════
   function buildStrengths(physical, summary, energy, command) {
     const out = [];
+    // ─── 체력 강점 (band=high인 항목) ───
     if (physical.cmjPower?.band === 'high') {
       out.push({ title: '하체 단위파워 우수', detail: `· CMJ 단위파워 ${physical.cmjPower.cmj} W/kg · 기준 상위` });
     }
@@ -1047,19 +1103,45 @@
       out.push({ title: '악력 우수', detail: `· 악력 ${physical.release.value} kg · 전완·손목 용량 충분` });
     }
 
+    // ─── 메카닉 강점 (한국 고1 우수 기준 상회만 표시) ───
     const etiTA = summary.etiTA?.mean;
-    if (etiTA != null && etiTA >= 1.5) {
-      out.push({ title: '몸통→상완 에너지 전달 우수', detail: `· ETI T→A ${r2(etiTA)} · 효율 전달` });
+    if (etiTA != null && etiTA >= 1.7) {
+      out.push({ title: '몸통→상완 에너지 전달 우수', detail: `· ETI T→A ${r2(etiTA)} · 효율적 amplification` });
     }
-
+    const etiPT = summary.etiPT?.mean;
+    if (etiPT != null && etiPT >= 1.5) {
+      out.push({ title: '골반→몸통 에너지 전달 우수', detail: `· ETI P→T ${r2(etiPT)} · 키네틱 체인 시작 효율` });
+    }
     const arm = summary.peakArmVel?.mean;
     if (arm != null && arm >= REF.arm.high) {
-      out.push({ title: '상완 회전 속도 우수', detail: `· ${r0(arm)}°/s · 기준 상위` });
+      out.push({ title: '상완 회전 속도 우수', detail: `· ${r0(arm)}°/s · 한국 고1 우수 기준 상회` });
     }
-
+    const trunk = summary.peakTrunkVel?.mean;
+    if (trunk != null && trunk >= REF.trunk.high) {
+      out.push({ title: '몸통 회전 속도 우수', detail: `· ${r0(trunk)}°/s · 한국 고1 우수 기준 상회` });
+    }
     const layback = summary.maxER?.mean;
     if (layback != null && layback >= REF.layback.high) {
       out.push({ title: '어깨 외회전 가동범위 우수', detail: `· Max Layback ${r1(layback)}° · 기준 상위` });
+    }
+    // ⭐ 신규 — 어깨 폭발력 (cocking arm power)
+    const cock = summary.cockingPhaseArmPowerWPerKg?.mean;
+    if (cock != null && cock >= 22) {
+      out.push({ title: '어깨 폭발력 우수', detail: `· 코킹 arm power ${r1(cock)} W/kg · 폭발적 가속력` });
+    }
+    // ⭐ 신규 — 플라잉오픈 적정
+    const flyingOpen = summary.trunkRotAtFP?.mean;
+    if (flyingOpen != null && Math.abs(flyingOpen) < 5) {
+      out.push({ title: '몸통 닫힘 유지 (플라잉오픈 안정)', detail: `· FC 시점 trunk rot ${r1(flyingOpen)}° · X-factor 보존` });
+    }
+    // ⭐ 신규 — 무릎 블록 (collapse -15~-5°)
+    const kneeFC = summary.kneeFlexionAtFC?.mean;
+    const kneeBR = summary.kneeFlexionAtBR?.mean;
+    if (kneeFC != null && kneeBR != null) {
+      const collapse = kneeFC - kneeBR;
+      if (collapse >= -20 && collapse <= -5) {
+        out.push({ title: '앞다리 블록 강함', detail: `· 무릎 ${r1(collapse)}° 신전 · 안정적 회전축 제공` });
+      }
     }
 
     if (command?.overall === 'A') {
@@ -1069,34 +1151,62 @@
     if (out.length === 0) {
       out.push({ title: '뚜렷한 우위 없음', detail: '· 모든 영역이 기준 범위 내 · 균형 보강 필요' });
     }
-    return out.slice(0, 5);
+    return out.slice(0, 6);  // 최대 6개로 확장
   }
 
   function buildWeaknesses(physical, summary, energy, command) {
     const out = [];
+    // ─── 메카닉 약점 ───
     const etiTA = summary.etiTA?.mean;
     if (etiTA != null && etiTA < 0.85) {
       const pct = Math.round((1 - etiTA) * 100);
       out.push({ title: '몸통→상완 에너지 누수', detail: `· ETI trunk→arm ${r2(etiTA)} · 약 ${pct}% 손실 · 기준 0.85 미만` });
     }
+    const etiPT = summary.etiPT?.mean;
+    if (etiPT != null && etiPT < 1.0) {
+      out.push({ title: '골반→몸통 전달 부족', detail: `· ETI P→T ${r2(etiPT)} · X-factor 또는 시퀀싱 점검 필요` });
+    }
+    // ─── 체력 약점 (band=low) ───
     if (physical.cmjPower?.band === 'low') {
-      out.push({ title: '하체 단위파워 기준 미만', detail: `· CMJ 단위파워 ${physical.cmjPower.cmj} W/kg · 기준 40 미만` });
+      out.push({ title: '하체 단위파워 기준 미만', detail: `· CMJ 단위파워 ${physical.cmjPower.cmj} W/kg · 기준 미만` });
     }
     if (physical.maxStrength?.band === 'low') {
-      out.push({ title: '절대근력 부족', detail: `· IMTP ${physical.maxStrength.perKg} N/kg · 기준 25 미만` });
+      out.push({ title: '절대근력 부족', detail: `· IMTP ${physical.maxStrength.perKg} N/kg · 기준 미만` });
     }
     if (physical.reactive?.band === 'low') {
-      out.push({ title: '반응성 부족', detail: `· CMJ RSI-mod ${physical.reactive.cmj} m/s · 기준 0.30 미만` });
+      out.push({ title: '반응성 부족', detail: `· CMJ RSI-mod ${physical.reactive.cmj} m/s · 기준 미만` });
     }
-
+    // ─── 메카닉 약점 추가 ───
     const layback = summary.maxER?.mean;
     if (layback != null && layback < REF.layback.low) {
       out.push({ title: '어깨 외회전 가동범위 부족', detail: `· Max Layback ${r1(layback)}° · 가속 거리 부족` });
     }
-
     const arm = summary.peakArmVel?.mean;
     if (arm != null && arm < REF.arm.low) {
-      out.push({ title: '상완 회전 속도 부족', detail: `· ${r0(arm)}°/s · 기준 1450 미만` });
+      out.push({ title: '상완 회전 속도 부족', detail: `· ${r0(arm)}°/s · 기준 ${REF.arm.low} 미만` });
+    }
+    const trunk = summary.peakTrunkVel?.mean;
+    if (trunk != null && trunk < REF.trunk.low) {
+      out.push({ title: '몸통 회전 속도 부족', detail: `· ${r0(trunk)}°/s · 기준 ${REF.trunk.low} 미만` });
+    }
+    // ⭐ 신규 — 플라잉오픈 (15° 이상)
+    const flyingOpen = summary.trunkRotAtFP?.mean;
+    if (flyingOpen != null && flyingOpen > 15) {
+      out.push({ title: '플라잉오픈 (몸통 일찍 열림)', detail: `· FC 시점 trunk rot ${r1(flyingOpen)}° · X-factor 손실` });
+    }
+    // ⭐ 신규 — 무릎 무너짐 (collapse > +5°)
+    const kneeFC = summary.kneeFlexionAtFC?.mean;
+    const kneeBR = summary.kneeFlexionAtBR?.mean;
+    if (kneeFC != null && kneeBR != null) {
+      const collapse = kneeFC - kneeBR;
+      if (collapse > 10) {
+        out.push({ title: '앞다리 무릎 주저앉음', detail: `· 무릎 ${r1(collapse)}° 굴곡 증가 · 회전축 흔들림` });
+      }
+    }
+    // ⭐ 신규 — 어깨 폭발력 부족
+    const cock = summary.cockingPhaseArmPowerWPerKg?.mean;
+    if (cock != null && cock < 15) {
+      out.push({ title: '어깨 폭발력 부족', detail: `· 코킹 arm power ${r1(cock)} W/kg · 가속 부족` });
     }
 
     if (command?.overall === 'D' || command?.overall === 'C') {
@@ -1104,9 +1214,9 @@
     }
 
     if (out.length === 0) {
-      out.push({ title: '전 영역 기준 충족 · 약점 없음', detail: '· 현재 수준을 유지하며 절대 근력 보강 시 추가 상승 여력' });
+      out.push({ title: '전 영역 기준 충족 · 뚜렷한 약점 없음', detail: '· 현재 수준을 유지하며 절대 근력 보강 시 추가 상승 여력' });
     }
-    return out.slice(0, 5);
+    return out.slice(0, 6);
   }
 
   // ═════════════════════════════════════════════════════════════════
@@ -1156,6 +1266,54 @@
         title: '제구 일관성 D등급 · 메카닉 변동 큼',
         evidence: ['5개 Domain 종합 D · 시행간 변동 과다'],
         implication: '· 메카닉 일관성 회복이 최우선 · 시퀀스/타이밍 drill 위주 4-6주 블록'
+      });
+    }
+
+    // ⭐ 신규 — 플라잉오픈 (15° 이상): 어깨 부담↑, 구속·제구 동시 저하
+    const flyingOpen = summary.trunkRotAtFP?.mean;
+    if (flyingOpen != null && flyingOpen > 15) {
+      flags.push({
+        severity: 'HIGH',
+        title: '플라잉오픈 (몸통 일찍 열림)',
+        evidence: [`FC 시점 trunk rot ${r1(flyingOpen)}° · 기준 < 5°`],
+        implication: '· X-factor 손실로 회전 동력 약화 · 어깨 anterior force 증가 · open shoulder drill, mound 정렬 점검 필요'
+      });
+    }
+
+    // ⭐ 신규 — 무릎 무너짐 (15° 이상): 디딤발 근력 부족
+    const kneeFC = summary.kneeFlexionAtFC?.mean;
+    const kneeBR = summary.kneeFlexionAtBR?.mean;
+    if (kneeFC != null && kneeBR != null) {
+      const collapse = kneeFC - kneeBR;
+      if (collapse > 15) {
+        flags.push({
+          severity: 'HIGH',
+          title: '앞다리 무릎 주저앉음 (knee collapse)',
+          evidence: [`FC→BR 무릎 굴곡 +${r1(collapse)}° 증가 (정상: -15~-5°)`],
+          implication: '· 회전축 흔들림으로 구속·제구 동시 저하 · 디딤발 근력 보강 (단발/오버헤드 스쿼트, RFE 스플릿 스쿼트) 필요'
+        });
+      }
+    }
+
+    // ⭐ 신규 — 어깨 폭발력 부족 (15 W/kg 미만)
+    const cock = summary.cockingPhaseArmPowerWPerKg?.mean;
+    if (cock != null && cock < 15) {
+      flags.push({
+        severity: 'MEDIUM',
+        title: '어깨 폭발력 부족',
+        evidence: [`코킹 arm power ${r1(cock)} W/kg · 기준 15 미만`],
+        implication: '· 가속 단계 폭발력 부족 · 메디신볼 회전 던지기, 플라이오 볼 던지기, 어깨 외회전 강화 권장'
+      });
+    }
+
+    // ⭐ 신규 — 팔꿈치 모멘트 위험 (130 N·m 이상): 부상 위험 신호
+    const elbowTorque = summary.elbowPeakTorqueNm?.mean;
+    if (elbowTorque != null && elbowTorque > 130) {
+      flags.push({
+        severity: 'HIGH',
+        title: '팔꿈치 부하 위험 영역',
+        evidence: [`Peak elbow moment ${r0(elbowTorque)} N·m · 위험 임계값 130 초과`],
+        implication: '· UCL 부상 위험 ↑ · 즉시 동작 점검 필요 · 어깨 폭발력 증가 + 키네틱 체인 효율 개선으로 팔꿈치 부담 분산'
       });
     }
 

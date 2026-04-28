@@ -895,12 +895,13 @@ function IntegratedKineticDiagram({ energy, precision }) {
   const P = precision || {};
   const { etiPT, etiTA, leakPct } = E;
 
-  // 3-tier color logic from EnergyFlow
+  // ─── v8 — 파란색(좋음) ↔ 빨간색(나쁨) 그라데이션 ───
+  // 사용자 요청: "에너지 흐름이 좋으면 파란색, 안 좋으면 빨간색"
   function stageStatus(eti, eliteThr, midThr) {
     if (eti == null) return { tier: 'none', color: '#475569', dark: '#1e293b', label: '미측정' };
-    if (eti >= eliteThr) return { tier: 'elite', color: '#10b981', dark: '#047857', label: '엘리트' };
-    if (eti >= midThr)   return { tier: 'mid',   color: '#f59e0b', dark: '#b45309', label: '양호 (개선여지)' };
-    return                       { tier: 'leak',  color: '#ef4444', dark: '#7f1d1d', label: '누수 감지' };
+    if (eti >= eliteThr) return { tier: 'elite',  color: '#3b82f6', dark: '#1e40af', label: '우수' };  // 파랑
+    if (eti >= midThr)   return { tier: 'mid',    color: '#a78bfa', dark: '#6d28d9', label: '보통' };  // 보라(중간)
+    return                       { tier: 'leak',  color: '#ef4444', dark: '#7f1d1d', label: '누수' };  // 빨강
   }
   const ptC = stageStatus(etiPT, 1.5, 1.3);
   const taC = stageStatus(etiTA, 1.7, 1.4);
@@ -915,26 +916,55 @@ function IntegratedKineticDiagram({ energy, precision }) {
     transferTA_KE,
     legAsymmetry,
     peakPivotHipVel,
-    peakStrideHipVel
+    peakStrideHipVel,
+    // ⭐ v8 신규 — 사용자 요청 변인 (이전 로직에서 가져옴)
+    kneeCollapseDeg,    // 무릎 무너짐 (FC→BR 굴곡 변화량, 양수=무너짐)
+    kneeSscMs,          // 무릎 SSC stretch→shortening 전환 시간 (ms)
+    flyingOpenDeg,      // 플라잉오픈 (FC 시점 trunk rotation)
+    trunkFlexAtBRDeg    // 릴리즈 시 몸통 전방 굴곡 (°)
   } = P;
 
+  // 파랑 ↔ 빨강 그라데이션 (사용자 요청)
   const toneLowerBetter = (val, [eliteT, normalT, midT]) =>
-    val == null ? 'none' : val < eliteT ? 'elite' : val < normalT ? 'normal' : val < midT ? 'mid' : 'bad';
+    val == null ? 'none' : val < eliteT ? 'elite' : val < normalT ? 'good' : val < midT ? 'mid' : 'bad';
   const toneHigherBetter = (val, [eliteT, normalT, midT]) =>
-    val == null ? 'none' : val >= eliteT ? 'elite' : val >= normalT ? 'normal' : val >= midT ? 'mid' : 'bad';
+    val == null ? 'none' : val >= eliteT ? 'elite' : val >= normalT ? 'good' : val >= midT ? 'mid' : 'bad';
+  // 범위 변인 — 적정 범위 내 = elite, 가까이 = good, 멀리 = mid/bad
+  const toneRange = (val, eliteRange, goodRange) => {
+    if (val == null) return 'none';
+    const [eLo, eHi] = eliteRange;
+    if (val >= eLo && val <= eHi) return 'elite';
+    const [gLo, gHi] = goodRange;
+    if (val >= gLo && val <= gHi) return 'good';
+    const off = Math.min(Math.abs(val - gLo), Math.abs(val - gHi));
+    return off < (gHi - gLo) ? 'mid' : 'bad';
+  };
   const TONES = {
-    elite:  { color: '#10b981', text: '엘리트' },
-    normal: { color: '#94a3b8', text: '정상' },
-    mid:    { color: '#f59e0b', text: '주의' },
-    bad:    { color: '#ef4444', text: '부족' },
-    none:   { color: '#475569', text: '미측정' }
+    elite: { color: '#3b82f6', text: '우수' },     // 파랑 — 흐름 좋음
+    good:  { color: '#60a5fa', text: '양호' },     // 옅은 파랑
+    mid:   { color: '#a78bfa', text: '보통' },     // 보라
+    bad:   { color: '#ef4444', text: '부족' },     // 빨강 — 흐름 나쁨
+    none:  { color: '#475569', text: '미측정' }
   };
   const elbowTone    = toneLowerBetter(elbowEff,        [2.5, 3.5, 4.0]);
   const shoulderTone = toneHigherBetter(cockPowerWPerKg, [30, 22, 15]);
   const trunkTone    = toneHigherBetter(transferTA_KE,   [2.5, 1.7, 1.0]);
   const asymTone     = legAsymmetry == null ? 'none'
-                     : (legAsymmetry >= 1.0 && legAsymmetry <= 2.5) ? 'normal'
+                     : (legAsymmetry >= 1.0 && legAsymmetry <= 2.5) ? 'good'
                      : 'mid';
+  // ⭐ v8 신규 변인 톤
+  // 무릎 무너짐: -15~-5° = elite(블록), -5~+5° = good, +5~+15° = mid, > +15° = bad
+  const kneeCollapseTone = kneeCollapseDeg == null ? 'none'
+                         : (kneeCollapseDeg >= -15 && kneeCollapseDeg <= -5) ? 'elite'
+                         : (kneeCollapseDeg >= -5 && kneeCollapseDeg <= 5) ? 'good'
+                         : (kneeCollapseDeg > 5 && kneeCollapseDeg <= 15) ? 'mid'
+                         : 'bad';
+  // SSC: < 150ms = elite, 150-200 = good, 200-250 = mid, > 250 = bad
+  const kneeSscTone = toneLowerBetter(kneeSscMs, [150, 200, 250]);
+  // 플라잉오픈: < 5° = elite, 5-10° = good, 10-15° = mid, > 15° = bad
+  const flyingOpenTone = toneLowerBetter(flyingOpenDeg, [5, 10, 15]);
+  // 몸통 전방 굴곡 (범위 변인): 35-45° = elite, 25-55° = good
+  const trunkFlexTone = toneRange(trunkFlexAtBRDeg, [35, 45], [25, 55]);
 
   // Keypoints — EnergyFlow base pose with throwing arm in late-cocking/MER
   // (matches Cornell #22 reference photo): elbow at head height, forearm
@@ -992,7 +1022,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
 
   return (
     <div className="energy-silhouette">
-      <svg viewBox="0 0 800 560" className="silhouette-svg" role="img" aria-label="키네틱 체인 통합 마네킹">
+      <svg viewBox="-140 0 1080 560" className="silhouette-svg" role="img" aria-label="키네틱 체인 통합 마네킹">
         <defs>
           <linearGradient id={`ik-bg-${uid}`} x1="0" x2="0" y1="0" y2="1">
             <stop offset="0" stopColor="#0b1220" stopOpacity="0"/>
@@ -1355,6 +1385,65 @@ function IntegratedKineticDiagram({ energy, precision }) {
           <text x="656" y="527" fill="#94a3b8" fontSize="9.5" textAnchor="middle">추진 지면반력으로 스트라이드 에너지 생성</text>
         </g>
 
+        {/* ⭐ v8 — LEFT: 무릎 무너짐 + 무릎 SSC 활용 (디딤발 블록 근처) */}
+        {(kneeCollapseDeg != null || kneeSscMs != null) && (
+          <g>
+            <line x1={K.lKnee[0] - 8} y1={K.lKnee[1]} x2="-22" y2="380" stroke={TONES[kneeCollapseTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
+            <rect x="-130" y="358" width="200" height="92" rx="6" fill="#0b1220" stroke={TONES[kneeCollapseTone].color} strokeOpacity="0.7"/>
+            <text x="-30" y="376" fill={TONES[kneeCollapseTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">앞무릎 안정성</text>
+            {kneeCollapseDeg != null && (
+              <>
+                <text x="-30" y="396" fill="#e2e8f0" fontSize="11" fontWeight="700" textAnchor="middle">
+                  무너짐: {kneeCollapseDeg > 0 ? '+' : ''}{kneeCollapseDeg.toFixed(1)}°
+                </text>
+                <text x="-30" y="411" fill={TONES[kneeCollapseTone].color} fontSize="9.5" textAnchor="middle">
+                  {kneeCollapseDeg > 5 ? '주저앉음' : kneeCollapseDeg > -5 ? '뻣뻣' : '정상 블록'}
+                </text>
+              </>
+            )}
+            {kneeSscMs != null && (
+              <>
+                <text x="-30" y="429" fill="#e2e8f0" fontSize="10.5" fontWeight="700" textAnchor="middle">
+                  SSC: {kneeSscMs.toFixed(0)}ms
+                </text>
+                <text x="-30" y="443" fill={TONES[kneeSscTone].color} fontSize="9" textAnchor="middle">
+                  {TONES[kneeSscTone].text} · 짧을수록 ↑
+                </text>
+              </>
+            )}
+          </g>
+        )}
+
+        {/* ⭐ v8 — LEFT-MID: 플라잉오픈 (골반-몸통 전달 근처) */}
+        {flyingOpenDeg != null && (
+          <g>
+            <line x1={K.pelvisC[0] - 30} y1={K.pelvisC[1] - 10} x2="40" y2="240" stroke={TONES[flyingOpenTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
+            <rect x="-130" y="220" width="200" height="64" rx="6" fill="#0b1220" stroke={TONES[flyingOpenTone].color} strokeOpacity="0.7"/>
+            <text x="-30" y="238" fill={TONES[flyingOpenTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">플라잉오픈 (FC)</text>
+            <text x="-30" y="258" fill="#e2e8f0" fontSize="14" fontWeight="800" textAnchor="middle">
+              {flyingOpenDeg.toFixed(1)}°
+            </text>
+            <text x="-30" y="276" fill={TONES[flyingOpenTone].color} fontSize="9.5" textAnchor="middle">
+              {TONES[flyingOpenTone].text} · 작을수록 ↑
+            </text>
+          </g>
+        )}
+
+        {/* ⭐ v8 — RIGHT-MID: 릴리즈 시 몸통 전방 굴곡 (몸통-팔 전달 근처) */}
+        {trunkFlexAtBRDeg != null && (
+          <g>
+            <line x1={K.trunkC[0] + 12} y1={K.trunkC[1] + 14} x2="822" y2="220" stroke={TONES[trunkFlexTone].color} strokeWidth="1.2" strokeDasharray="2 3" opacity="0.7"/>
+            <rect x="788" y="200" width="200" height="64" rx="6" fill="#0b1220" stroke={TONES[trunkFlexTone].color} strokeOpacity="0.7"/>
+            <text x="888" y="218" fill={TONES[trunkFlexTone].color} fontSize="10.5" fontWeight="700" textAnchor="middle" letterSpacing="0.4">릴리즈 몸통 굴곡</text>
+            <text x="888" y="238" fill="#e2e8f0" fontSize="14" fontWeight="800" textAnchor="middle">
+              {trunkFlexAtBRDeg.toFixed(1)}°
+            </text>
+            <text x="888" y="256" fill={TONES[trunkFlexTone].color} fontSize="9.5" textAnchor="middle">
+              {TONES[trunkFlexTone].text} · 35-45° 정상
+            </text>
+          </g>
+        )}
+
         {/* === Joint markers (key kinematic points) === */}
         <g style={{ pointerEvents: 'none' }}>
           {[
@@ -1378,9 +1467,12 @@ function IntegratedKineticDiagram({ energy, precision }) {
         </g>
       </svg>
       <div className="silhouette-legend">
-        <div className="leg-item"><span className="dot" style={{ background: '#22d3ee' }}/>에너지 시작</div>
-        <div className="leg-item"><span className="dot" style={{ background: ptC.color }}/>골반→몸통</div>
-        <div className="leg-item"><span className="dot" style={{ background: taC.color }}/>몸통→팔</div>
+        <div className="leg-item">
+          <span style={{ display:'inline-block', width:14, height:14, borderRadius:3, background:'linear-gradient(90deg,#3b82f6,#a78bfa,#ef4444)', marginRight:6 }}/>
+          <b>에너지 흐름:</b> <span style={{color:'#3b82f6'}}>파랑=좋음</span> · <span style={{color:'#a78bfa'}}>보라=보통</span> · <span style={{color:'#ef4444'}}>빨강=나쁨</span>
+        </div>
+        <div className="leg-item"><span className="dot" style={{ background: ptC.color }}/>골반→몸통 ({ptC.label})</div>
+        <div className="leg-item"><span className="dot" style={{ background: taC.color }}/>몸통→팔 ({taC.label})</div>
         <div className="leg-item"><span className="dot" style={{ background: TONES[elbowTone].color }}/>① 팔꿈치 부담</div>
         <div className="leg-item"><span className="dot" style={{ background: TONES[shoulderTone].color }}/>② 어깨 폭발력</div>
         <div className="leg-item"><span className="dot" style={{ background: '#3b82f6' }}/>축발 · <span className="dot" style={{ background: '#a855f7', marginLeft: 6 }}/>디딤발</div>
@@ -1389,7 +1481,7 @@ function IntegratedKineticDiagram({ energy, precision }) {
           <span style={{ display:'inline-block', width:9, height:9, borderRadius:'50%', background:'#22d3ee', border:'1.5px solid #fff', marginLeft:8, marginRight:4 }}/>그 외 관절
           <span style={{ display:'inline-block', width:9, height:9, borderRadius:'50%', background:'#a78bfa', border:'1.5px solid #fff', marginLeft:8, marginRight:4 }}/>골반
         </div>
-        <div className="leg-item note">색띠 = 에너지 흐름 · 빨강 점멸 = 누수 · 맥동 링 = 정밀 지표</div>
+        <div className="leg-item note">색띠 두께·진하기 = 에너지 흐름 강도 · 카드 색 = 해당 변인의 평가 결과</div>
       </div>
     </div>
   );
