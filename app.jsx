@@ -115,6 +115,208 @@
   // 입력 폼
   // ═════════════════════════════════════════════════════════════════
   // ⭐ v12 — 저장된 분석 갤러리 (브라우저 localStorage 기반)
+  // ⭐ v16 — 이름 입력으로 빠른 불러오기 (사용자 요청)
+  function QuickLoadByName({ onLoadSaved }) {
+    const [query, setQuery] = useState('');
+    const [matches, setMatches] = useState([]);
+    const [showMatches, setShowMatches] = useState(false);
+    const [feedback, setFeedback] = useState('');
+    const inputRef = useRef(null);
+
+    // 입력 변화 → 실시간 매칭
+    useEffect(() => {
+      if (!query.trim()) {
+        setMatches([]);
+        setShowMatches(false);
+        return;
+      }
+      const found = findPitchersByName(query);
+      setMatches(found);
+      setShowMatches(found.length > 0);
+    }, [query]);
+
+    function handleLoad(it) {
+      setShowMatches(false);
+      setQuery('');
+      onLoadSaved(it.id);
+    }
+
+    function handleSubmit() {
+      const q = query.trim();
+      if (!q) {
+        setFeedback('이름을 입력해 주세요.');
+        return;
+      }
+      const found = findPitchersByName(q);
+      if (found.length === 0) {
+        setFeedback(`"${q}" 이름의 분석 결과가 없습니다.`);
+        return;
+      }
+      if (found.length === 1) {
+        // 정확히 1명 매칭 → 즉시 로드
+        handleLoad(found[0]);
+        return;
+      }
+      // 여러 명 → 정확히 일치하는 것이 있으면 그걸 우선 로드
+      const exact = found.filter(it => (it.pitcher?.profile?.name || '').toLowerCase() === q.toLowerCase());
+      if (exact.length === 1) {
+        handleLoad(exact[0]);
+        return;
+      }
+      // 그래도 여러 명이면 목록 표시
+      setMatches(found);
+      setShowMatches(true);
+      setFeedback(`"${q}"으로 시작하는 ${found.length}명을 찾았습니다. 아래에서 선택하세요.`);
+    }
+
+    // 파일 가져오기 — 단일 선수 JSON 또는 전체 DB JSON
+    async function handleImport(file) {
+      try {
+        const result = await readPitcherJson(file);
+        if (result.kind === 'single') {
+          // 단일 선수 → DB에 저장 후 즉시 로드
+          const id = savePitcherToDb(result.pitcher);
+          setFeedback(`✅ ${result.pitcher.profile?.name || ''} 분석 결과를 불러왔습니다.`);
+          onLoadSaved(id);
+        } else if (result.kind === 'db') {
+          // 전체 DB → 현재 DB에 합치기
+          const existing = loadDb();
+          let added = 0;
+          result.entries.forEach(entry => {
+            existing[entry.id] = entry;
+            added++;
+          });
+          writeDb(existing);
+          setFeedback(`✅ ${added}개의 분석을 가져왔습니다. 아래 갤러리에서 확인하세요.`);
+        }
+      } catch (err) {
+        setFeedback(`❌ 가져오기 실패: ${err.message}`);
+      }
+    }
+
+    return (
+      <div style={{
+        marginBottom: 16, padding: '18px 22px',
+        background: 'linear-gradient(135deg, rgba(96,165,250,0.06), rgba(59,130,246,0.04))',
+        border: '1px solid rgba(96,165,250,0.25)', borderRadius: 12
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ fontSize: 22 }}>🔍</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#60a5fa', letterSpacing: '0.8px' }}>
+              QUICK LOAD · 이름으로 빠른 불러오기
+            </div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+              저장된 선수 이름을 입력하거나, 다른 컴퓨터에서 받은 JSON 파일을 가져오세요.
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'stretch', flexWrap: 'wrap' }}>
+          {/* 이름 입력 */}
+          <div style={{ flex: '1 1 240px', position: 'relative', minWidth: 200 }}>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={e => { setQuery(e.target.value); setFeedback(''); }}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }}
+              placeholder="선수 이름 입력 (예: 김강연)"
+              style={{
+                width: '100%', padding: '10px 14px', fontSize: 14,
+                background: 'rgba(0,0,0,0.4)',
+                border: '1.5px solid rgba(96,165,250,0.35)', borderRadius: 8,
+                color: '#e2e8f0', outline: 'none', fontFamily: 'inherit',
+                boxSizing: 'border-box'
+              }}
+              onFocus={e => e.target.style.borderColor = 'rgba(96,165,250,0.7)'}
+              onBlur={e => {
+                e.target.style.borderColor = 'rgba(96,165,250,0.35)';
+                // 살짝 지연 두어 dropdown 클릭 가능하게
+                setTimeout(() => setShowMatches(false), 200);
+              }}
+            />
+            {/* 매칭 드롭다운 */}
+            {showMatches && matches.length > 0 && (
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+                background: '#0f172a', border: '1px solid rgba(96,165,250,0.4)',
+                borderRadius: 8, maxHeight: 220, overflowY: 'auto', zIndex: 10,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+              }}>
+                {matches.map(it => {
+                  const p = it.pitcher;
+                  const name = p?.profile?.name || '?';
+                  const date = p?.profile?.date || '';
+                  const ovGrade = p?.summaryScores?.overall?.grade;
+                  return (
+                    <div key={it.id}
+                      onMouseDown={e => { e.preventDefault(); handleLoad(it); }}
+                      style={{
+                        padding: '8px 12px', cursor: 'pointer',
+                        borderBottom: '1px solid rgba(148,163,184,0.1)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(96,165,250,0.1)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>{name}</div>
+                        <div style={{ fontSize: 10.5, color: '#94a3b8' }}>{date}</div>
+                      </div>
+                      {ovGrade && (
+                        <span style={{
+                          fontSize: 11, fontWeight: 700, fontFamily: 'Inter',
+                          padding: '2px 8px', borderRadius: 4,
+                          background: 'rgba(96,165,250,0.15)', color: '#60a5fa'
+                        }}>{ovGrade}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <button onClick={handleSubmit} style={{
+            padding: '10px 18px', fontSize: 13, fontWeight: 700,
+            background: '#3b82f6', color: '#fff', border: 'none', borderRadius: 8,
+            cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap'
+          }}>
+            🔎 불러오기
+          </button>
+
+          <label style={{
+            padding: '10px 18px', fontSize: 13, fontWeight: 700,
+            background: 'transparent', color: '#a78bfa',
+            border: '1.5px solid rgba(167,139,250,0.4)', borderRadius: 8,
+            cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+            display: 'inline-flex', alignItems: 'center', gap: 6
+          }}>
+            📁 JSON 파일에서
+            <input type="file" accept=".json,application/json" style={{ display: 'none' }}
+              onChange={e => { if (e.target.files?.[0]) handleImport(e.target.files[0]); e.target.value=''; }}/>
+          </label>
+        </div>
+
+        {feedback && (
+          <div style={{
+            marginTop: 10, padding: '8px 12px', fontSize: 11.5,
+            background: feedback.startsWith('❌') ? 'rgba(239,68,68,0.1)'
+                       : feedback.startsWith('✅') ? 'rgba(16,185,129,0.1)'
+                       : 'rgba(96,165,250,0.08)',
+            border: `1px solid ${feedback.startsWith('❌') ? 'rgba(239,68,68,0.3)'
+                                : feedback.startsWith('✅') ? 'rgba(16,185,129,0.3)'
+                                : 'rgba(96,165,250,0.25)'}`,
+            borderRadius: 6,
+            color: feedback.startsWith('❌') ? '#fca5a5' : feedback.startsWith('✅') ? '#6ee7b7' : '#cbd5e1'
+          }}>
+            {feedback}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   function SavedReportsGallery({ onLoadSaved, onDeleteSaved }) {
     const [items, setItems] = useState(() => listPitchers());
     const [filter, setFilter] = useState('');
@@ -621,7 +823,10 @@
             <p>선수 메타 CSV 1개 + Uplift CSV 10개를 드래그앤드롭하면 자동 분석됩니다.</p>
           </div>
 
-          {/* ⭐ v12 — 저장된 분석 갤러리 (이 브라우저에 저장된 모든 선수) */}
+          {/* ⭐ v16 — 이름 입력 빠른 불러오기 + JSON 파일 가져오기 (사용자 요청) */}
+          <QuickLoadByName onLoadSaved={onLoadSaved}/>
+
+          {/* 저장된 분석 갤러리 (이 브라우저에 저장된 모든 선수) */}
           <SavedReportsGallery onLoadSaved={onLoadSaved} onDeleteSaved={onDeleteSaved}/>
 
           {/* SECTION 1 */}
@@ -1015,6 +1220,90 @@
   function clearCurrent() {
     try { sessionStorage.removeItem(LEGACY_KEY); } catch (e) { /* ignore */ }
   }
+
+  // ⭐ v16 — 단일 선수 분석 결과를 "선수명_YYYYMMDD.json"으로 다운로드
+  // 학생/교수가 다른 컴퓨터로 옮길 때 사용
+  function downloadPitcherJson(pitcher) {
+    if (!pitcher || !pitcher.profile) {
+      alert('저장할 분석 결과가 없습니다.');
+      return null;
+    }
+    const slim = slimPitcher(pitcher);
+    const name = (pitcher.profile.name || 'unknown').replace(/[\s\\/:*?"<>|]/g, '_');
+    const date = (pitcher.profile.date || new Date().toISOString().slice(0,10)).replace(/-/g, '');
+    const filename = `${name}_${date}.json`;
+    // 파일 형식: 단일 선수 ({version, exportedAt, pitcher})
+    const payload = {
+      version: 'bbl-pitcher-single-v1',
+      exportedAt: new Date().toISOString(),
+      pitcher: slim
+    };
+    try {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+      return filename;
+    } catch (e) {
+      console.error('JSON 다운로드 실패:', e);
+      alert('JSON 다운로드 실패: ' + e.message);
+      return null;
+    }
+  }
+
+  // ⭐ v16 — 단일 선수 JSON 파일을 읽어 pitcher 객체 반환
+  function readPitcherJson(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          const obj = JSON.parse(e.target.result);
+          // 두 가지 형식 지원: 단일 선수 / 전체 DB
+          if (obj?.pitcher && obj?.version === 'bbl-pitcher-single-v1') {
+            resolve({ kind: 'single', pitcher: obj.pitcher });
+          } else if (obj?.profile) {
+            // 옛 형식 — 그냥 pitcher 객체 자체
+            resolve({ kind: 'single', pitcher: obj });
+          } else if (typeof obj === 'object') {
+            // 전체 DB 형식 (id → entry)
+            const entries = Object.values(obj).filter(e => e && e.pitcher);
+            if (entries.length > 0) {
+              resolve({ kind: 'db', entries });
+            } else {
+              reject(new Error('지원하지 않는 파일 형식입니다.'));
+            }
+          } else {
+            reject(new Error('JSON 형식이 잘못되었습니다.'));
+          }
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('파일 읽기 실패'));
+      reader.readAsText(file);
+    });
+  }
+
+  // ⭐ v16 — 이름으로 저장된 선수 검색 (대소문자 무시, 부분 일치)
+  function findPitchersByName(query) {
+    if (!query || !query.trim()) return [];
+    const q = query.trim().toLowerCase();
+    return listPitchers().filter(it => {
+      const name = (it.pitcher?.profile?.name || '').toLowerCase();
+      return name.includes(q);
+    });
+  }
+
+  // 글로벌로 노출 — dashboard.jsx의 DashTopBar에서 직접 호출 가능
+  window.BBL_DOWNLOAD_PITCHER = downloadPitcherJson;
+  window.BBL_SAVE_PITCHER_TO_DB = savePitcherToDb;
 
   // URL hash 파싱: #report 또는 #report=<id>
   function parseHash() {

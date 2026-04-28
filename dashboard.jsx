@@ -218,6 +218,42 @@ function DashTopBar({ pitcher, mode, theme, onTheme, onMenu, onBack }) {
             새 분석
           </button>
         )}
+        {/* ⭐ v16 — 분석 결과를 "선수명_YYYYMMDD.json"으로 다운로드 (사용자 요청) */}
+        {pitcher && (
+          <button className="tb-btn" onClick={() => {
+            if (typeof window.BBL_DOWNLOAD_PITCHER !== 'function') {
+              alert('저장 기능을 사용할 수 없습니다.');
+              return;
+            }
+            // 사이드바 pitcher (간소화 객체)에는 정보가 부족할 수 있으므로 BBL_PITCHERS[0]에서 전체 객체 가져오기
+            const fullPitcher = (window.BBL_PITCHERS && window.BBL_PITCHERS[0]) || pitcher;
+            const filename = window.BBL_DOWNLOAD_PITCHER(fullPitcher);
+            // 동시에 localStorage DB에도 저장 (이미 자동 저장된 상태일 것이지만 한 번 더 보장)
+            if (typeof window.BBL_SAVE_PITCHER_TO_DB === 'function') {
+              window.BBL_SAVE_PITCHER_TO_DB(fullPitcher);
+            }
+            if (filename) {
+              // 토스트 — 잠깐 보였다 사라지는 알림
+              const toast = document.createElement('div');
+              toast.textContent = `✅ 저장 완료 — ${filename}`;
+              toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.4);transition:opacity 0.3s';
+              document.body.appendChild(toast);
+              setTimeout(() => toast.style.opacity = '0', 2200);
+              setTimeout(() => toast.remove(), 2500);
+            }
+          }} title="현재 분석 결과를 JSON 파일로 저장" style={{
+            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.4)', color: '#34d399',
+            padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', borderRadius: 6,
+            display: 'flex', alignItems: 'center', gap: 6
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            저장
+          </button>
+        )}
         <button className="tb-btn primary" onClick={() => window.print()}>
           {Ic.download} <span>PDF</span>
         </button>
