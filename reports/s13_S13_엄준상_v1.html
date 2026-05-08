@@ -1,0 +1,2334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uplift Hitting Report — S13 엄준상</title>
+<style>
+/* report_batting.css
+   ================================================================
+   Uplift Hitting Report — 정돈된 sport-science 톤
+   ================================================================ */
+
+:root {
+  /* 색상 — 한국 야구 분위기 */
+  --c-bg:        #fafaf7;          /* 옅은 미색 배경 (페이퍼 톤) */
+  --c-card:      #ffffff;
+  --c-ink:       #1a1d23;          /* 짙은 차콜 */
+  --c-ink-2:     #4b5563;          /* 보조 텍스트 */
+  --c-muted:     #9ca3af;          /* 흐린 회색 */
+  --c-line:      #e7e5e0;          /* 카드 보더 */
+  --c-line-2:    #f3f1ec;          /* 더 흐린 보더 */
+
+  --c-accent:    #c8102e;          /* KBO 적색 */
+  --c-accent-2:  #f59e0b;          /* Driveline 주황 */
+  --c-accent-3:  #2563eb;          /* 데이터 블루 */
+
+  /* 점수 컬러 */
+  --c-bad:       #b91c1c;          /* 0~30 */
+  --c-warn:      #d97706;          /* 30~50 */
+  --c-mid:       #65a30d;          /* 50~70 */
+  --c-good:      #047857;          /* 70~100 */
+
+  /* 카테고리 컬러 (Driveline 5-카테고리 + 추가) */
+  --c-b1: #d97706;    /* Stride Posture — 주황 */
+  --c-b2: #ca8a04;    /* Stride Rotation — 골드 */
+  --c-b3: #16a34a;    /* Swing Posture — 녹색 */
+  --c-b4: #c8102e;    /* Swing Rotation — 적색 (가장 영향력) */
+  --c-b5: #2563eb;    /* CoG — 블루 */
+  --c-b6: #7c3aed;    /* Bat Path — 보라 */
+  --c-b7: #0891b2;    /* Consistency — 청록 */
+  --c-f:  #475569;    /* Fitness — 회청 */
+
+  /* 폰트 */
+  --ff-display: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo',
+                'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --ff-mono:    ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --ff-num:     'Pretendard', -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: var(--ff-display);
+  font-size: 14.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 인쇄 시 사이즈 */
+@media print {
+  html, body { background: white; }
+  .cat-card, .athlete-card, .headline, .radar-section,
+  .faults-card, .coach-notes, .method-note { break-inside: avoid; }
+}
+
+#app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.report-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ============================== 헤더 */
+.report-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-bottom: 2px solid var(--c-ink);
+  padding-bottom: 12px;
+}
+.brand-mark {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.brand-sub {
+  font-size: 12px;
+  color: var(--c-ink-2);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.brand-cohort {
+  font-size: 12px;
+  color: var(--c-ink-2);
+  font-family: var(--ff-mono);
+}
+
+/* ============================== 선수 카드 */
+.athlete-card {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-left: 4px solid var(--c-accent);
+  border-radius: 6px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.athlete-name {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.athlete-meta {
+  font-size: 12.5px;
+  color: var(--c-ink-2);
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+.athlete-body {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.vital {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  min-width: 60px;
+}
+.vital label {
+  font-size: 10.5px;
+  color: var(--c-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.vital span {
+  font-size: 17px;
+  font-weight: 700;
+  font-feature-settings: 'tnum';
+}
+
+/* ============================== 헤드라인 KPI */
+.headline {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  padding: 24px;
+}
+.hl-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 24px;
+}
+.hl-block {
+  border-left: 1px solid var(--c-line-2);
+  padding-left: 20px;
+}
+.hl-block:first-child {
+  border-left: none;
+  padding-left: 0;
+}
+.hl-block.primary .hl-value {
+  color: var(--c-accent);
+}
+.hl-value {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  font-feature-settings: 'tnum';
+}
+.hl-value small {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-ink-2);
+  letter-spacing: 0;
+}
+.hl-label {
+  font-size: 12px;
+  color: var(--c-ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 6px;
+  font-weight: 600;
+}
+.hl-sub {
+  font-size: 11.5px;
+  color: var(--c-muted);
+  margin-top: 3px;
+}
+.ae {
+  font-size: 13px;
+  font-weight: 700;
+  margin-left: 8px;
+  font-feature-settings: 'tnum';
+}
+.ae.pos { color: var(--c-good); }
+.ae.neg { color: var(--c-bad); }
+.ae sub { font-size: 9px; }
+
+/* ============================== 레이더 */
+.radar-section {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  padding: 24px;
+}
+.radar-section h2 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.radar-wrap {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 32px;
+  align-items: center;
+}
+.radar-svg {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+}
+.radar-ring   { fill: none; stroke: var(--c-line); stroke-width: 1; }
+.radar-axis   { stroke: var(--c-line); stroke-width: 1; }
+.radar-elite  { fill: rgba(245,158,11,0.08); stroke: var(--c-accent-2); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.radar-player { fill: rgba(200,16,46,0.18); stroke: var(--c-accent); stroke-width: 2; }
+.radar-dot    { fill: var(--c-accent); }
+.radar-label  { font-size: 12px; font-weight: 600; fill: var(--c-ink); }
+
+.radar-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--c-ink-2);
+}
+.radar-legend > div { display: flex; align-items: center; gap: 8px; }
+.sw {
+  width: 16px; height: 10px; display: inline-block; border-radius: 2px;
+}
+.sw.player { background: rgba(200,16,46,0.18); border: 2px solid var(--c-accent); }
+.sw.elite  { background: rgba(245,158,11,0.08); border: 1.4px dashed var(--c-accent-2); }
+.cat-mini {
+  display: flex !important;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--c-bg);
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.cat-mini-name  { color: var(--c-ink); font-weight: 600; font-size: 12.5px; }
+.cat-mini-score { font-weight: 800; font-size: 15px; font-feature-settings: 'tnum'; }
+
+/* ============================== 카테고리 카드 그리드 */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+.cat-card {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+/* 카테고리 별 좌측 색띠 */
+.cat-card[data-cat="B1_StridePosture"]  { border-left: 4px solid var(--c-b1); }
+.cat-card[data-cat="B2_StrideRotation"] { border-left: 4px solid var(--c-b2); }
+.cat-card[data-cat="B3_SwingPosture"]   { border-left: 4px solid var(--c-b3); }
+.cat-card[data-cat="B4_SwingRotation"]  { border-left: 4px solid var(--c-b4); }
+.cat-card[data-cat="B5_CoG"]            { border-left: 4px solid var(--c-b5); }
+.cat-card[data-cat="B6_BatPath"]        { border-left: 4px solid var(--c-b6); }
+.cat-card[data-cat="B7_Consistency"]    { border-left: 4px solid var(--c-b7); }
+.cat-card[data-cat="F_Fitness"]         { border-left: 4px solid var(--c-f); }
+
+.cat-card.full-width { grid-column: 1 / -1; }
+
+.cat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.cat-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.cat-id {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  color: var(--c-muted);
+  font-weight: 600;
+}
+.cat-score {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-feature-settings: 'tnum';
+  line-height: 1;
+}
+.cat-desc {
+  margin: 6px 0 12px;
+  font-size: 12px;
+  color: var(--c-ink-2);
+  line-height: 1.5;
+}
+.dl-imp {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  background: var(--c-line-2);
+  border-radius: 3px;
+  color: var(--c-ink-2);
+}
+
+/* ============================== 변수 테이블 */
+.var-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.var-table th {
+  text-align: left;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-muted);
+  font-weight: 700;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--c-line);
+}
+.var-table th:nth-child(2),
+.var-table th:nth-child(3),
+.var-table th:nth-child(5) { text-align: right; }
+.var-table td {
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--c-line-2);
+  vertical-align: middle;
+}
+.var-row:last-child td { border-bottom: none; }
+
+.var-name-kr {
+  font-weight: 600;
+  font-size: 13px;
+}
+.var-name-en {
+  font-size: 11px;
+  color: var(--c-muted);
+  margin-top: 1px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.dir-icon {
+  font-family: var(--ff-mono);
+  background: var(--c-line-2);
+  padding: 0 4px;
+  border-radius: 2px;
+  font-size: 9.5px;
+}
+
+.var-value {
+  text-align: right;
+  font-weight: 700;
+  font-feature-settings: 'tnum';
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+.var-value small {
+  font-weight: 500;
+  color: var(--c-ink-2);
+  font-size: 11px;
+  margin-left: 2px;
+}
+.var-ref {
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--c-muted);
+  font-family: var(--ff-mono);
+  white-space: nowrap;
+}
+.var-score {
+  text-align: right;
+  font-weight: 800;
+  font-feature-settings: 'tnum';
+  font-size: 18px;
+}
+
+/* percentile bar */
+.var-pctbar { width: 180px; min-width: 180px; }
+.pct-bar {
+  position: relative;
+  width: 140px;
+  height: 18px;
+  margin: 0 auto;
+}
+.pct-track {
+  position: absolute; top: 50%; left: 0; right: 0; height: 4px;
+  transform: translateY(-50%);
+  background: linear-gradient(to right,
+    rgba(185,28,28,0.35) 0%,
+    rgba(217,119,6,0.35) 25%,
+    rgba(101,163,13,0.35) 60%,
+    rgba(4,120,87,0.35) 100%);
+  border-radius: 2px;
+}
+.pct-tick {
+  position: absolute; top: 50%;
+  width: 1.5px; height: 10px;
+  background: var(--c-muted);
+  transform: translateY(-50%);
+}
+.pct-tick.low  { left: 5%; }
+.pct-tick.mid  { left: 50%; background: var(--c-ink); height: 14px; }
+.pct-tick.high { left: 95%; }
+
+.pct-marker {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--c-accent);
+  border: 2px solid var(--c-card);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+.pct-text {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  color: var(--c-ink-2);
+}
+
+/* ============================== Faults */
+.faults-card {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  padding: 20px 24px;
+}
+.faults-card h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.faults-clean {
+  margin: 0;
+  color: var(--c-good);
+  font-weight: 600;
+  font-size: 13px;
+}
+.faults-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.fault-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  background: var(--c-bg);
+  border-left: 3px solid var(--c-warn);
+}
+.fault-item.severity-high {
+  background: rgba(185,28,28,0.05);
+  border-left-color: var(--c-bad);
+}
+.fault-mark {
+  color: var(--c-bad);
+  font-weight: 800;
+}
+.fault-label {
+  flex: 1;
+  font-weight: 600;
+}
+.fault-sev {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-bad);
+  font-weight: 700;
+}
+.fault-item:not(.severity-high) .fault-sev { color: var(--c-warn); }
+.faults-note {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--c-muted);
+  line-height: 1.5;
+}
+
+/* ============================== 코치 노트 */
+.coach-notes {
+  background: var(--c-card);
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  padding: 20px 24px;
+}
+.coach-notes h2 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.cn-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.cn-block h4 {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--c-ink-2);
+}
+.cn-block ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+.cn-block.weak    h4 { color: var(--c-bad); }
+.cn-block.focus   h4 { color: var(--c-warn); }
+.cn-block.strong  h4 { color: var(--c-good); }
+
+.cn-note {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  color: var(--c-muted);
+  border-top: 1px solid var(--c-line-2);
+  padding-top: 10px;
+}
+
+/* ============================== 메서드 노트 */
+.method-note {
+  font-size: 11.5px;
+  color: var(--c-ink-2);
+  background: var(--c-bg);
+  border: 1px dashed var(--c-line);
+  border-radius: 4px;
+  padding: 16px 20px;
+}
+.method-note h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-ink);
+}
+.method-note ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+.method-note li { margin-bottom: 4px; }
+
+.report-foot {
+  text-align: center;
+  font-size: 11px;
+  color: var(--c-muted);
+  font-family: var(--ff-mono);
+  padding-top: 16px;
+  border-top: 1px solid var(--c-line-2);
+}
+
+/* ============================== 반응형 */
+@media (max-width: 900px) {
+  .hl-row { grid-template-columns: 1fr 1fr; }
+  .hl-block { border-left: none; padding-left: 0; }
+  .radar-wrap { grid-template-columns: 1fr; }
+  .cat-grid { grid-template-columns: 1fr; }
+  .cn-grid { grid-template-columns: 1fr; }
+  .athlete-card { flex-direction: column; align-items: flex-start; }
+  .athlete-body { width: 100%; }
+}
+
+.error {
+  color: var(--c-bad);
+  background: rgba(185,28,28,0.05);
+  border: 1px solid var(--c-bad);
+  border-radius: 4px;
+  padding: 16px;
+  font-weight: 600;
+}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+  <p style="text-align:center;padding:40px;color:#9ca3af">리포트 렌더링 중...</p>
+</div>
+
+<script>
+window.ATHLETE_DATA = {
+  "athlete_name": "S13 엄준상",
+  "athleteid": "5f472ecd-f10e-47d7-a709-aefcd8c97456",
+  "sessionid": "5a8a66f0-6d8b-4534-83ef-73e35b5cd0f4_9",
+  "session_uuid": "5a8a66f0-6d8b-4534-83ef-73e35b5cd0f4",
+  "session_seq": 9,
+  "capture_datetime": "2025-10-02 09:55:18",
+  "fps": 239.34169278996865,
+  "handedness": "right",
+  "footedness": null,
+  "approved_by_biomech_qa": 1,
+  "n_frames": 503,
+  "duration_s": 2.097419777341192,
+  "frame_max_foot_raise": 270,
+  "frame_pelvis_initiation": 281,
+  "frame_max_x_factor": 321,
+  "frame_foot_contact": 329,
+  "frame_ball_contact": 352,
+  "max_pelvis_rotation_at_stride_deg": 57.11186337178248,
+  "torso_rotation_at_fp_deg": -21.18211758581089,
+  "rear_shoulder_adduction_at_fp_deg": -37.32356317850214,
+  "lead_hip_posterior_tilt_at_fp_deg": 2.035620707944645,
+  "max_pelvis_rotation_velo_at_stride_dps": 603.9487926360318,
+  "max_torso_rotation_velo_at_stride_dps": 637.4709184914964,
+  "pelvis_rotation_at_swing_deg": 39.88613817257037,
+  "lead_hip_posterior_tilt_at_swing_deg": -1.84791470493768,
+  "lead_hip_adduction_at_fp_deg": -22.33261989491262,
+  "lead_hip_adduction_at_swing_deg": -2.571344073066476,
+  "pelvis_rotation_velo_at_swing_dps": 594.0354161302322,
+  "torso_rotation_velo_at_swing_dps": 689.9066886540409,
+  "upper_arm_rotation_velo_at_swing_dps": 963.6468910135492,
+  "max_cog_velo_at_stride_mps": 0.630020882135494,
+  "max_cog_velo_mps": 0.630020882135494,
+  "cog_decel_mps": 0.5851640718002036,
+  "peak_pelvis_angular_velocity": 603.9488,
+  "peak_trunk_angular_velocity": 689.9067,
+  "peak_arm_angular_velocity": 923.1689,
+  "max_x_factor": 20.95844835154356,
+  "pelvis_to_trunk_velocity_speedup": 1.1423264638759056,
+  "trunk_to_arm_velocity_speedup": 1.3381068448056266,
+  "hip_hinge": 62.36414,
+  "trunk_coil": 37.915283,
+  "trunk_tilt_at_launch": 6.804491,
+  "rear_scap_load_at_launch": 1.9170091,
+  "rear_elbow_flexion_at_launch": 132.84195,
+  "rear_elbow_flexion_at_ball_contact": 64.10729,
+  "rear_arm_connection": 0.42625156,
+  "inter_elbow_distance": null,
+  "lead_knee_angle_at_ball_contact": -12.567814,
+  "stride_length": 1.0703324,
+  "shoulder_rotation_plane_flexion": 41.40312,
+  "shoulder_rotation_plane_tilt": 13.154881,
+  "relative_hand_position_towards_pitcher": -0.2700059,
+  "relative_hand_position_up": 0.19186227,
+  "relative_hand_position_away_from_body": 0.18791847,
+  "linear_stretch": 0.8015325,
+  "attack_angle": -10.393176796588865,
+  "attack_direction": null,
+  "launch_position": 146.4675833595014,
+  "sweet_spot_fore_aft_position_at_contact": 0.3177392,
+  "on_plane_efficiency": 91.0,
+  "swing_path_angle": null,
+  "pelvis_acceleration_time": 0.1882845188284518,
+  "pelvis_decceleration_time": 0.205020920502092,
+  "time_to_ball_contact": 0.83682007,
+  "time_to_launch": 0.53974897,
+  "kinematic_sequence_order": "Pelvis-Trunk-Arm",
+  "proper_sequence_binary": 1,
+  "fault_sway": 1.0,
+  "fault_knee_dominant_swing": 0.0,
+  "fault_vertical_pelvis_hike": 0.0,
+  "fault_excessive_lateral_pelvis_tilt": 1.0,
+  "fault_drifting_forward": 1.0,
+  "fault_sway_leg": 0.0,
+  "fault_leads_with_wrist": 0.0,
+  "fault_rear_elbow_drag": null,
+  "fault_hand_push": null,
+  "fault_crashing": null,
+  "drifting_forward_magnitude": 0.21036997,
+  "athlete_id": "s13",
+  "blast_bat_speed_mph": 55.41,
+  "blast_peak_hand_speed_mph": 17.51,
+  "blast_rotational_acceleration_g": 15.66,
+  "blast_time_to_contact_s": 0.1471,
+  "blast_attack_angle_deg": -13.86,
+  "blast_on_plane_efficiency_pct": 94.89,
+  "blast_vertical_bat_angle_deg": -26.89,
+  "blast_power_kw": 3.517,
+  "blast_early_connection_deg": 84.99,
+  "blast_connection_at_impact_deg": 85.35,
+  "bat_speed_sd_mph": 1.929,
+  "attack_angle_sd_deg": 5.495,
+  "time_to_contact_sd_s": 0.00827,
+  "peak_arm_av_sd_dps": 228.4,
+  "peak_trunk_av_sd_dps": 79.9,
+  "max_x_factor_sd_deg": 5.396,
+  "height_cm": 176.6,
+  "weight_kg": 89.1,
+  "grip_strength_kg": 44.8,
+  "cmj_height_cm": 47.8,
+  "cmj_pp_bm": 37.07,
+  "imtp_pp_bm": 24.67,
+  "rotation_pp_w_kg": 8.03,
+  "sprint_30m_s": 4.05,
+  "broad_jump_cm": 242.1,
+  "bat_speed_mph": 55.41
+};
+</script>
+
+<script>
+// metadata_batting.js
+// =====================================================================
+// 타격 리포트 변수 정의 + 코호트 분포 + Bat Speed 회귀 모델
+// 자동 생성: build_js_files.py
+//
+// 투수 리포트의 metadata.js v33.21 구조 차용:
+//   - VARIABLE_METADATA: 변수별 optimal·sigma·mean·sd·percentile 기준
+//   - BAT_SPEED_REGRESSION: Bat Speed 다중회귀 (예측 + 효율 잔차)
+//   - VARIABLE_LABELS: 한글/영문 라벨
+//   - FAULT_LABELS: 결함 한글 라벨
+// =====================================================================
+
+const COHORT_INFO = {
+  n_total: 80,
+  source: 'synthetic_v1 (placeholder until real data accumulated)',
+};
+
+const VARIABLE_METADATA = {
+  "max_pelvis_rotation_at_stride_deg": {
+    "direction": "lower_is_better",
+    "unit": "deg",
+    "optimal": 29.4109,
+    "sigma": 7.2497,
+    "mean": 40.0894,
+    "sd": 14.4995,
+    "median": 38.1641,
+    "q25": 29.4109,
+    "q75": 48.5736,
+    "n": 80,
+    "label_kr": "Stride 중 골반 회전량",
+    "label_en": "Max Pelvis Rotation @ Stride"
+  },
+  "torso_rotation_at_fp_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": -16.2474,
+    "sigma": 4.588,
+    "mean": -15.6288,
+    "sd": 9.1761,
+    "median": -16.2474,
+    "q25": -20.667,
+    "q75": -10.4083,
+    "n": 80,
+    "label_kr": "FP 시점 트렁크 회전(X-factor)",
+    "label_en": "Torso Rotation @ FP"
+  },
+  "rear_shoulder_adduction_at_fp_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": -35.7137,
+    "sigma": 7.2129,
+    "mean": -37.4378,
+    "sd": 14.4258,
+    "median": -35.7137,
+    "q25": -46.6219,
+    "q75": -26.9492,
+    "n": 80,
+    "label_kr": "FP 시점 뒤쪽 어깨 내전",
+    "label_en": "Rear Shoulder Adduction @ FP"
+  },
+  "lead_hip_posterior_tilt_at_fp_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 5.4179,
+    "sigma": 4.345,
+    "mean": 4.3256,
+    "sd": 8.69,
+    "median": 5.4179,
+    "q25": -1.56,
+    "q75": 9.6435,
+    "n": 80,
+    "label_kr": "FP 시점 골반 후방경사",
+    "label_en": "Lead Hip Posterior Tilt @ FP"
+  },
+  "max_pelvis_rotation_velo_at_stride_dps": {
+    "direction": "higher_is_better",
+    "unit": "deg/s",
+    "optimal": 481.16,
+    "sigma": 54.3184,
+    "mean": 418.7347,
+    "sd": 108.6368,
+    "median": 420.8703,
+    "q25": 365.4385,
+    "q75": 481.16,
+    "n": 80,
+    "label_kr": "Stride 중 골반 최고 회전속도",
+    "label_en": "Max Pelvis Rot Velo @ Stride"
+  },
+  "max_torso_rotation_velo_at_stride_dps": {
+    "direction": "higher_is_better",
+    "unit": "deg/s",
+    "optimal": 554.1043,
+    "sigma": 60.9018,
+    "mean": 452.8724,
+    "sd": 121.8036,
+    "median": 451.1453,
+    "q25": 362.3225,
+    "q75": 554.1043,
+    "n": 80,
+    "label_kr": "Stride 중 트렁크 최고 회전속도",
+    "label_en": "Max Torso Rot Velo @ Stride"
+  },
+  "pelvis_rotation_at_swing_deg": {
+    "direction": "higher_is_better",
+    "unit": "deg",
+    "optimal": 80.7225,
+    "sigma": 7.5089,
+    "mean": 70.7718,
+    "sd": 15.0178,
+    "median": 69.6218,
+    "q25": 61.0849,
+    "q75": 80.7225,
+    "n": 80,
+    "label_kr": "Down Swing 중 골반 회전량",
+    "label_en": "Pelvis Rotation @ Swing"
+  },
+  "lead_hip_posterior_tilt_at_swing_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 9.1079,
+    "sigma": 4.4272,
+    "mean": 8.4114,
+    "sd": 8.8543,
+    "median": 9.1079,
+    "q25": 0.8078,
+    "q75": 14.9611,
+    "n": 80,
+    "label_kr": "BC 시점 골반 후방경사",
+    "label_en": "Lead Hip Posterior Tilt @ Swing"
+  },
+  "lead_hip_adduction_at_fp_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 20.0404,
+    "sigma": 5.017,
+    "mean": 20.1199,
+    "sd": 10.034,
+    "median": 20.0404,
+    "q25": 14.7117,
+    "q75": 24.6416,
+    "n": 80,
+    "label_kr": "FP 시점 리드 고관절 내전",
+    "label_en": "Lead Hip Adduction @ FP"
+  },
+  "lead_hip_adduction_at_swing_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 26.7862,
+    "sigma": 5.2508,
+    "mean": 26.8206,
+    "sd": 10.5017,
+    "median": 26.7862,
+    "q25": 19.1561,
+    "q75": 33.2294,
+    "n": 80,
+    "label_kr": "Down Swing 중 리드 고관절 내전",
+    "label_en": "Lead Hip Adduction @ Swing"
+  },
+  "pelvis_rotation_velo_at_swing_dps": {
+    "direction": "higher_is_better",
+    "unit": "deg/s",
+    "optimal": 694.8345,
+    "sigma": 48.014,
+    "mean": 620.5709,
+    "sd": 96.0279,
+    "median": 617.0964,
+    "q25": 570.1133,
+    "q75": 694.8345,
+    "n": 80,
+    "label_kr": "Down Swing 골반 회전속도",
+    "label_en": "Pelvis Rot Velo @ Swing"
+  },
+  "torso_rotation_velo_at_swing_dps": {
+    "direction": "higher_is_better",
+    "unit": "deg/s",
+    "optimal": 947.4177,
+    "sigma": 58.3591,
+    "mean": 871.3175,
+    "sd": 116.7183,
+    "median": 877.9572,
+    "q25": 802.0505,
+    "q75": 947.4177,
+    "n": 80,
+    "label_kr": "Down Swing 트렁크 회전속도",
+    "label_en": "Torso Rot Velo @ Swing"
+  },
+  "upper_arm_rotation_velo_at_swing_dps": {
+    "direction": "higher_is_better",
+    "unit": "deg/s",
+    "optimal": 1684.5448,
+    "sigma": 163.4095,
+    "mean": 1484.5847,
+    "sd": 326.819,
+    "median": 1526.518,
+    "q25": 1269.8882,
+    "q75": 1684.5448,
+    "n": 80,
+    "label_kr": "Down Swing 상완 회전속도",
+    "label_en": "Upper Arm Rot Velo @ Swing"
+  },
+  "max_cog_velo_at_stride_mps": {
+    "direction": "higher_is_better",
+    "unit": "m/s",
+    "optimal": 1.2206,
+    "sigma": 0.1123,
+    "mean": 1.0479,
+    "sd": 0.2245,
+    "median": 1.0405,
+    "q25": 0.9075,
+    "q75": 1.2206,
+    "n": 80,
+    "label_kr": "Stride 중 무게중심 최고속도",
+    "label_en": "Max CoG Velo @ Stride"
+  },
+  "max_cog_velo_mps": {
+    "direction": "higher_is_better",
+    "unit": "m/s",
+    "optimal": 1.2534,
+    "sigma": 0.13,
+    "mean": 1.0918,
+    "sd": 0.2601,
+    "median": 1.1373,
+    "q25": 0.8937,
+    "q75": 1.2534,
+    "n": 80,
+    "label_kr": "무게중심 최고속도 (전구간)",
+    "label_en": "Max CoG Velo"
+  },
+  "cog_decel_mps": {
+    "direction": "higher_is_better",
+    "unit": "m/s",
+    "optimal": 1.2991,
+    "sigma": 0.1593,
+    "mean": 1.0825,
+    "sd": 0.3187,
+    "median": 1.0862,
+    "q25": 0.8734,
+    "q75": 1.2991,
+    "n": 80,
+    "label_kr": "무게중심 감속량 (FP 후 block)",
+    "label_en": "CoG Decel"
+  },
+  "max_x_factor": {
+    "direction": "higher_is_better",
+    "unit": "deg",
+    "optimal": 34.3425,
+    "sigma": 4.6299,
+    "mean": 28.5652,
+    "sd": 9.2597,
+    "median": 28.5869,
+    "q25": 23.145,
+    "q75": 34.3425,
+    "n": 80,
+    "label_kr": "최대 X-Factor (Hip-Shoulder 분리)",
+    "label_en": "Max X-Factor"
+  },
+  "pelvis_to_trunk_velocity_speedup": {
+    "direction": "higher_is_better",
+    "unit": "ratio",
+    "optimal": 1.5719,
+    "sigma": 0.133,
+    "mean": 1.4322,
+    "sd": 0.266,
+    "median": 1.4384,
+    "q25": 1.2807,
+    "q75": 1.5719,
+    "n": 80,
+    "label_kr": "골반→트렁크 속도 증폭",
+    "label_en": "Pelvis→Trunk Speedup"
+  },
+  "trunk_to_arm_velocity_speedup": {
+    "direction": "higher_is_better",
+    "unit": "ratio",
+    "optimal": 2.0068,
+    "sigma": 0.1741,
+    "mean": 1.7466,
+    "sd": 0.3481,
+    "median": 1.7885,
+    "q25": 1.4842,
+    "q75": 2.0068,
+    "n": 80,
+    "label_kr": "트렁크→팔 속도 증폭",
+    "label_en": "Trunk→Arm Speedup"
+  },
+  "on_plane_efficiency": {
+    "direction": "higher_is_better",
+    "unit": "%",
+    "optimal": 87.6558,
+    "sigma": 3.613,
+    "mean": 83.2155,
+    "sd": 7.226,
+    "median": 83.4623,
+    "q25": 77.6097,
+    "q75": 87.6558,
+    "n": 80,
+    "label_kr": "스윙 플레인 효율",
+    "label_en": "On Plane Efficiency"
+  },
+  "attack_angle": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 3.2486,
+    "sigma": 4.0865,
+    "mean": 4.7173,
+    "sd": 8.173,
+    "median": 3.2486,
+    "q25": -0.9719,
+    "q75": 9.9656,
+    "n": 80,
+    "label_kr": "어택 앵글 (Uplift)",
+    "label_en": "Attack Angle (Uplift)"
+  },
+  "hip_hinge": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 44.6472,
+    "sigma": 5.7449,
+    "mean": 45.2396,
+    "sd": 11.4898,
+    "median": 44.6472,
+    "q25": 36.8232,
+    "q75": 52.0527,
+    "n": 80,
+    "label_kr": "힙 힌지 (셋업)",
+    "label_en": "Hip Hinge"
+  },
+  "trunk_coil": {
+    "direction": "higher_is_better",
+    "unit": "deg",
+    "optimal": 37.8332,
+    "sigma": 6.5453,
+    "mean": 29.7721,
+    "sd": 13.0906,
+    "median": 30.9686,
+    "q25": 19.2456,
+    "q75": 37.8332,
+    "n": 80,
+    "label_kr": "트렁크 코일",
+    "label_en": "Trunk Coil"
+  },
+  "linear_stretch": {
+    "direction": "higher_is_better",
+    "unit": "-",
+    "optimal": 0.9367,
+    "sigma": 0.0583,
+    "mean": 0.8642,
+    "sd": 0.1167,
+    "median": 0.8706,
+    "q25": 0.8036,
+    "q75": 0.9367,
+    "n": 80,
+    "label_kr": "선형 신장 (loading)",
+    "label_en": "Linear Stretch"
+  },
+  "bat_speed_sd_mph": {
+    "direction": "lower_is_better",
+    "unit": "mph",
+    "optimal": 1.8035,
+    "sigma": 0.3383,
+    "mean": 2.2237,
+    "sd": 0.6766,
+    "median": 2.1988,
+    "q25": 1.8035,
+    "q75": 2.5788,
+    "n": 80,
+    "label_kr": "Bat Speed 일관성 (SD)",
+    "label_en": "Bat Speed SD"
+  },
+  "attack_angle_sd_deg": {
+    "direction": "lower_is_better",
+    "unit": "deg",
+    "optimal": 2.9155,
+    "sigma": 0.5524,
+    "mean": 3.6833,
+    "sd": 1.1048,
+    "median": 3.8444,
+    "q25": 2.9155,
+    "q75": 4.4954,
+    "n": 80,
+    "label_kr": "어택앵글 일관성 (SD)",
+    "label_en": "Attack Angle SD"
+  },
+  "time_to_contact_sd_s": {
+    "direction": "lower_is_better",
+    "unit": "s",
+    "optimal": 0.0093,
+    "sigma": 0.0022,
+    "mean": 0.0124,
+    "sd": 0.0043,
+    "median": 0.0117,
+    "q25": 0.0093,
+    "q75": 0.0152,
+    "n": 80,
+    "label_kr": "컨택 타이밍 일관성 (SD)",
+    "label_en": "Time to Contact SD"
+  },
+  "peak_arm_av_sd_dps": {
+    "direction": "lower_is_better",
+    "unit": "deg/s",
+    "optimal": 89.4433,
+    "sigma": 22.1374,
+    "mean": 119.3876,
+    "sd": 44.2747,
+    "median": 126.5591,
+    "q25": 89.4433,
+    "q75": 148.713,
+    "n": 80,
+    "label_kr": "Peak Arm Vel 일관성 (SD)",
+    "label_en": "Peak Arm Vel SD"
+  },
+  "peak_trunk_av_sd_dps": {
+    "direction": "lower_is_better",
+    "unit": "deg/s",
+    "optimal": 33.9975,
+    "sigma": 9.2851,
+    "mean": 48.1876,
+    "sd": 18.5701,
+    "median": 49.7292,
+    "q25": 33.9975,
+    "q75": 62.4788,
+    "n": 80,
+    "label_kr": "Peak Trunk Vel 일관성 (SD)",
+    "label_en": "Peak Trunk Vel SD"
+  },
+  "max_x_factor_sd_deg": {
+    "direction": "lower_is_better",
+    "unit": "deg",
+    "optimal": 2.8623,
+    "sigma": 0.7241,
+    "mean": 3.5123,
+    "sd": 1.4482,
+    "median": 3.6809,
+    "q25": 2.8623,
+    "q75": 4.3497,
+    "n": 80,
+    "label_kr": "X-Factor 일관성 (SD)",
+    "label_en": "Max X-Factor SD"
+  },
+  "blast_bat_speed_mph": {
+    "direction": "higher_is_better",
+    "unit": "mph",
+    "optimal": 68.9946,
+    "sigma": 3.4604,
+    "mean": 64.6655,
+    "sd": 6.9208,
+    "median": 64.951,
+    "q25": 60.3836,
+    "q75": 68.9946,
+    "n": 80,
+    "label_kr": "Bat Speed (Blast)",
+    "label_en": "Bat Speed"
+  },
+  "blast_peak_hand_speed_mph": {
+    "direction": "higher_is_better",
+    "unit": "mph",
+    "optimal": 22.3466,
+    "sigma": 1.2082,
+    "mean": 20.6104,
+    "sd": 2.4163,
+    "median": 20.8598,
+    "q25": 19.0692,
+    "q75": 22.3466,
+    "n": 80,
+    "label_kr": "Peak Hand Speed",
+    "label_en": "Peak Hand Speed"
+  },
+  "blast_rotational_acceleration_g": {
+    "direction": "higher_is_better",
+    "unit": "g",
+    "optimal": 16.2045,
+    "sigma": 1.5872,
+    "mean": 14.1231,
+    "sd": 3.1744,
+    "median": 14.3122,
+    "q25": 11.831,
+    "q75": 16.2045,
+    "n": 80,
+    "label_kr": "회전 가속도",
+    "label_en": "Rotational Acceleration"
+  },
+  "blast_time_to_contact_s": {
+    "direction": "lower_is_better",
+    "unit": "s",
+    "optimal": 0.1416,
+    "sigma": 0.0131,
+    "mean": 0.1583,
+    "sd": 0.0261,
+    "median": 0.1587,
+    "q25": 0.1416,
+    "q75": 0.173,
+    "n": 80,
+    "label_kr": "Time to Contact",
+    "label_en": "Time to Contact"
+  },
+  "blast_attack_angle_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 4.2423,
+    "sigma": 4.1963,
+    "mean": 4.3606,
+    "sd": 8.3925,
+    "median": 4.2423,
+    "q25": -0.783,
+    "q75": 9.7934,
+    "n": 80,
+    "label_kr": "어택 앵글 (Blast)",
+    "label_en": "Attack Angle (Blast)"
+  },
+  "blast_on_plane_efficiency_pct": {
+    "direction": "higher_is_better",
+    "unit": "%",
+    "optimal": 89.3165,
+    "sigma": 4.6988,
+    "mean": 83.0073,
+    "sd": 9.3976,
+    "median": 83.7752,
+    "q25": 75.9457,
+    "q75": 89.3165,
+    "n": 80,
+    "label_kr": "On Plane Efficiency (Blast)",
+    "label_en": "On Plane Efficiency"
+  },
+  "blast_vertical_bat_angle_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": -33.2006,
+    "sigma": 2.6412,
+    "mean": -33.1735,
+    "sd": 5.2824,
+    "median": -33.2006,
+    "q25": -36.2892,
+    "q75": -29.8082,
+    "n": 80,
+    "label_kr": "Vertical Bat Angle",
+    "label_en": "Vertical Bat Angle"
+  },
+  "blast_power_kw": {
+    "direction": "higher_is_better",
+    "unit": "kW",
+    "optimal": 4.2881,
+    "sigma": 0.3311,
+    "mean": 3.8524,
+    "sd": 0.6623,
+    "median": 3.8923,
+    "q25": 3.3915,
+    "q75": 4.2881,
+    "n": 80,
+    "label_kr": "Power",
+    "label_en": "Power"
+  },
+  "blast_early_connection_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 90.0,
+    "sigma": 3.0177,
+    "mean": 87.7311,
+    "sd": 6.0355,
+    "median": 87.7547,
+    "q25": 84.0188,
+    "q75": 92.6149,
+    "n": 80,
+    "label_kr": "Early Connection",
+    "label_en": "Early Connection"
+  },
+  "blast_connection_at_impact_deg": {
+    "direction": "two_sided",
+    "unit": "deg",
+    "optimal": 90.0,
+    "sigma": 3.0661,
+    "mean": 91.0547,
+    "sd": 6.1321,
+    "median": 90.1194,
+    "q25": 87.3951,
+    "q75": 95.0165,
+    "n": 80,
+    "label_kr": "Connection @ Impact",
+    "label_en": "Connection @ Impact"
+  },
+  "grip_strength_kg": {
+    "direction": "higher_is_better",
+    "unit": "kg",
+    "optimal": 54.825,
+    "sigma": 3.8074,
+    "mean": 49.5625,
+    "sd": 7.6149,
+    "median": 48.6,
+    "q25": 44.7,
+    "q75": 54.825,
+    "n": 80,
+    "label_kr": "악력",
+    "label_en": "Grip Strength"
+  },
+  "cmj_height_cm": {
+    "direction": "higher_is_better",
+    "unit": "cm",
+    "optimal": 50.925,
+    "sigma": 3.4434,
+    "mean": 47.0538,
+    "sd": 6.8868,
+    "median": 47.0,
+    "q25": 42.0,
+    "q75": 50.925,
+    "n": 80,
+    "label_kr": "CMJ 점프 높이",
+    "label_en": "CMJ Height"
+  },
+  "cmj_pp_bm": {
+    "direction": "higher_is_better",
+    "unit": "W/kg",
+    "optimal": 57.0475,
+    "sigma": 3.385,
+    "mean": 53.6628,
+    "sd": 6.77,
+    "median": 54.105,
+    "q25": 48.5625,
+    "q75": 57.0475,
+    "n": 80,
+    "label_kr": "CMJ 상대 파워",
+    "label_en": "CMJ Peak Power/BM"
+  },
+  "imtp_pp_bm": {
+    "direction": "higher_is_better",
+    "unit": "W/kg",
+    "optimal": 29.5225,
+    "sigma": 1.5844,
+    "mean": 28.1028,
+    "sd": 3.1688,
+    "median": 27.96,
+    "q25": 26.2425,
+    "q75": 29.5225,
+    "n": 80,
+    "label_kr": "IMTP 상대 파워",
+    "label_en": "IMTP Peak Power/BM"
+  },
+  "rotation_pp_w_kg": {
+    "direction": "higher_is_better",
+    "unit": "W/kg",
+    "optimal": 7.8575,
+    "sigma": 0.6985,
+    "mean": 6.9475,
+    "sd": 1.397,
+    "median": 6.935,
+    "q25": 6.1725,
+    "q75": 7.8575,
+    "n": 80,
+    "label_kr": "회전 파워",
+    "label_en": "Rotational Power"
+  },
+  "sprint_30m_s": {
+    "direction": "lower_is_better",
+    "unit": "s",
+    "optimal": 4.1375,
+    "sigma": 0.1308,
+    "mean": 4.3216,
+    "sd": 0.2616,
+    "median": 4.35,
+    "q25": 4.1375,
+    "q75": 4.49,
+    "n": 80,
+    "label_kr": "30m 스프린트",
+    "label_en": "30m Sprint"
+  },
+  "broad_jump_cm": {
+    "direction": "higher_is_better",
+    "unit": "cm",
+    "optimal": 261.475,
+    "sigma": 12.2375,
+    "mean": 247.5025,
+    "sd": 24.4749,
+    "median": 245.55,
+    "q25": 233.875,
+    "q75": 261.475,
+    "n": 80,
+    "label_kr": "제자리 멀리뛰기",
+    "label_en": "Broad Jump"
+  },
+  "height_cm": {
+    "direction": "higher_is_better",
+    "unit": "cm",
+    "optimal": 183.875,
+    "sigma": 3.4588,
+    "mean": 179.3688,
+    "sd": 6.9176,
+    "median": 178.65,
+    "q25": 174.375,
+    "q75": 183.875,
+    "n": 80,
+    "label_kr": "신장",
+    "label_en": "Height"
+  },
+  "weight_kg": {
+    "direction": "two_sided",
+    "unit": "kg",
+    "optimal": 79.5,
+    "sigma": 4.3305,
+    "mean": 79.9175,
+    "sd": 8.661,
+    "median": 79.5,
+    "q25": 73.475,
+    "q75": 85.225,
+    "n": 80,
+    "label_kr": "체중",
+    "label_en": "Weight"
+  }
+};
+
+const FAULT_LABELS = {
+  "fault_drifting_forward": {
+    "kr": "Drifting Forward (앞으로 흘러나감)",
+    "severity": "high"
+  },
+  "fault_excessive_lateral_pelvis_tilt": {
+    "kr": "과도한 측방 골반 기울기",
+    "severity": "med"
+  },
+  "fault_knee_dominant_swing": {
+    "kr": "Knee Dominant Swing (무릎 의존)",
+    "severity": "high"
+  },
+  "fault_vertical_pelvis_hike": {
+    "kr": "골반 수직 하이크 (vertical hike)",
+    "severity": "med"
+  },
+  "fault_sway_leg": {
+    "kr": "Sway Leg (뒷다리 흔들림)",
+    "severity": "med"
+  },
+  "fault_leads_with_wrist": {
+    "kr": "Leads with Wrist (손목 선행)",
+    "severity": "high"
+  },
+  "fault_rear_elbow_drag": {
+    "kr": "Rear Elbow Drag (뒤팔꿈치 끌림)",
+    "severity": "high"
+  },
+  "fault_hand_push": {
+    "kr": "Hand Push (손 밀기)",
+    "severity": "med"
+  },
+  "fault_crashing": {
+    "kr": "Crashing (자세 무너짐)",
+    "severity": "high"
+  }
+};
+
+const BAT_SPEED_REGRESSION = {
+  "model": "BAT_SPEED_REGRESSION_v1",
+  "target": "bat_speed_mph",
+  "predictors": [
+    "upper_arm_rotation_velo_at_swing_dps",
+    "torso_rotation_velo_at_swing_dps",
+    "cog_decel_mps",
+    "max_x_factor",
+    "pelvis_to_trunk_velocity_speedup",
+    "on_plane_efficiency",
+    "grip_strength_kg",
+    "cmj_pp_bm",
+    "rotation_pp_w_kg",
+    "height_cm"
+  ],
+  "intercept": -4.413976,
+  "coefs": {
+    "upper_arm_rotation_velo_at_swing_dps": 0.008317,
+    "torso_rotation_velo_at_swing_dps": 0.017434,
+    "cog_decel_mps": 2.170402,
+    "max_x_factor": 0.118384,
+    "pelvis_to_trunk_velocity_speedup": 3.144055,
+    "on_plane_efficiency": 0.156383,
+    "grip_strength_kg": 0.07399,
+    "cmj_pp_bm": 0.06589,
+    "rotation_pp_w_kg": 0.516242,
+    "height_cm": 0.041837
+  },
+  "beta_standardized": {
+    "upper_arm_rotation_velo_at_swing_dps": 0.3927,
+    "torso_rotation_velo_at_swing_dps": 0.294,
+    "cog_decel_mps": 0.0999,
+    "max_x_factor": 0.1584,
+    "pelvis_to_trunk_velocity_speedup": 0.1208,
+    "on_plane_efficiency": 0.1633,
+    "grip_strength_kg": 0.0814,
+    "cmj_pp_bm": 0.0645,
+    "rotation_pp_w_kg": 0.1042,
+    "height_cm": 0.0418
+  },
+  "R2": 0.8357,
+  "adj_R2": 0.8119,
+  "LOO_CV_R2": 0.7736,
+  "n": 80,
+  "predictor_means": {
+    "upper_arm_rotation_velo_at_swing_dps": 1484.5847,
+    "torso_rotation_velo_at_swing_dps": 871.3175,
+    "cog_decel_mps": 1.0825,
+    "max_x_factor": 28.5652,
+    "pelvis_to_trunk_velocity_speedup": 1.4322,
+    "on_plane_efficiency": 83.2155,
+    "grip_strength_kg": 49.5625,
+    "cmj_pp_bm": 53.6628,
+    "rotation_pp_w_kg": 6.9475,
+    "height_cm": 179.3688
+  },
+  "predictor_sds": {
+    "upper_arm_rotation_velo_at_swing_dps": 326.819,
+    "torso_rotation_velo_at_swing_dps": 116.7183,
+    "cog_decel_mps": 0.3187,
+    "max_x_factor": 9.2597,
+    "pelvis_to_trunk_velocity_speedup": 0.266,
+    "on_plane_efficiency": 7.226,
+    "grip_strength_kg": 7.6149,
+    "cmj_pp_bm": 6.77,
+    "rotation_pp_w_kg": 1.397,
+    "height_cm": 6.9176
+  }
+};
+
+
+// =====================================================================
+// 점수 함수 (Gaussian + percentile hybrid)
+// =====================================================================
+// 투수 리포트의 LITERATURE_OVERRIDE + Gaussian 점수와 동일 철학:
+//   - direction='higher_is_better': 값이 클수록 점수 높음 → 코호트 percentile 사용
+//   - direction='lower_is_better':  값이 작을수록 점수 높음 → (100 - percentile) 사용
+//   - direction='two_sided':        optimal 근처가 만점 → Gaussian 점수
+//
+function scoreVariable(varKey, value) {
+  if (value == null || isNaN(value)) return null;
+  const m = VARIABLE_METADATA[varKey];
+  if (!m) return null;
+  const dir = m.direction;
+
+  if (dir === 'higher_is_better' || dir === 'lower_is_better') {
+    // percentile 기반: 값이 코호트 분포에서 어디 위치하는지
+    // 정확한 percentile은 cohort 데이터를 따로 로드해야 하지만,
+    // 여기서는 mean·sd 기반 z-score → 정규분포 근사 percentile 사용
+    const z = (value - m.mean) / m.sd;
+    let pct = 100 * normCdf(z);
+    if (dir === 'lower_is_better') pct = 100 - pct;
+    return Math.max(0, Math.min(100, pct));
+  }
+  if (dir === 'two_sided') {
+    // Gaussian: optimal에서 멀어질수록 점수 하락
+    const z = (value - m.optimal) / m.sigma;
+    return 100 * Math.exp(-0.5 * z * z);
+  }
+  return null;
+}
+
+// 표준 정규분포 누적분포함수 (Abramowitz-Stegun 근사, 충분히 정확)
+function normCdf(z) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989423 * Math.exp(-z * z / 2);
+  let p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return z > 0 ? 1 - p : p;
+}
+
+
+// =====================================================================
+// Bat Speed 예측 함수
+// =====================================================================
+function predictBatSpeed(values) {
+  // values: object mapping variable_key to numeric value
+  // 결측 시 코호트 mean으로 imputation
+  let result = BAT_SPEED_REGRESSION.intercept;
+  for (const p of BAT_SPEED_REGRESSION.predictors) {
+    let v = values[p];
+    if (v == null || isNaN(v)) {
+      v = BAT_SPEED_REGRESSION.predictor_means[p];
+    }
+    result += BAT_SPEED_REGRESSION.coefs[p] * v;
+  }
+  return result;
+}
+
+</script>
+
+<script>
+// cohort_batting.js
+// =====================================================================
+// 타격 리포트 카테고리 정의 (B1~B7, F) — Driveline 5-카테고리 + 확장
+// 자동 생성: build_js_files.py
+// =====================================================================
+
+const CATEGORIES = {
+  "B1_StridePosture": {
+    "label_kr": "B1. Stride Posture (스트라이드 자세)",
+    "label_en": "Stride Posture",
+    "description": "로딩→앞발 착지(FP)까지 골반·고관절·뒷팔의 위치 정확도",
+    "driveline_relative_importance": 1.53,
+    "variables": [
+      {
+        "key": "max_pelvis_rotation_at_stride_deg",
+        "weight": 0.47
+      },
+      {
+        "key": "torso_rotation_at_fp_deg",
+        "weight": 0.44
+      },
+      {
+        "key": "rear_shoulder_adduction_at_fp_deg",
+        "weight": 0.35
+      },
+      {
+        "key": "lead_hip_posterior_tilt_at_fp_deg",
+        "weight": 0.27
+      }
+    ]
+  },
+  "B2_StrideRotation": {
+    "label_kr": "B2. Stride Rotation (스트라이드 회전)",
+    "label_en": "Stride Rotation",
+    "description": "FP 직전까지 트렁크와 골반의 회전 가속",
+    "driveline_relative_importance": 1.26,
+    "variables": [
+      {
+        "key": "max_pelvis_rotation_velo_at_stride_dps",
+        "weight": 1.0
+      },
+      {
+        "key": "max_torso_rotation_velo_at_stride_dps",
+        "weight": 0.26
+      }
+    ]
+  },
+  "B3_SwingPosture": {
+    "label_kr": "B3. Swing Posture (스윙 자세)",
+    "label_en": "Swing Posture",
+    "description": "FP→임팩트 동안 자세 유지 능력",
+    "driveline_relative_importance": 1.13,
+    "variables": [
+      {
+        "key": "pelvis_rotation_at_swing_deg",
+        "weight": 0.84
+      },
+      {
+        "key": "lead_hip_adduction_at_swing_deg",
+        "weight": 0.29
+      }
+    ]
+  },
+  "B4_SwingRotation": {
+    "label_kr": "B4. Swing Rotation (스윙 회전)",
+    "label_en": "Swing Rotation",
+    "description": "임팩트 구간 트렁크·골반·상완의 출력 — Bat Speed에 가장 영향력 큰 모델",
+    "driveline_relative_importance": 1.64,
+    "variables": [
+      {
+        "key": "torso_rotation_velo_at_swing_dps",
+        "weight": 0.8
+      },
+      {
+        "key": "upper_arm_rotation_velo_at_swing_dps",
+        "weight": 0.5
+      },
+      {
+        "key": "pelvis_rotation_velo_at_swing_dps",
+        "weight": 0.34
+      }
+    ]
+  },
+  "B5_CoG": {
+    "label_kr": "B5. CoG (무게중심)",
+    "label_en": "Center of Gravity",
+    "description": "무게중심 전진 → block & rotate. CoG Decel이 elite 핵심 차별 변수",
+    "driveline_relative_importance": 1.68,
+    "variables": [
+      {
+        "key": "max_cog_velo_at_stride_mps",
+        "weight": 0.67
+      },
+      {
+        "key": "cog_decel_mps",
+        "weight": 0.67
+      },
+      {
+        "key": "max_cog_velo_mps",
+        "weight": 0.34
+      }
+    ]
+  },
+  "B6_BatPath": {
+    "label_kr": "B6. Bat Path (스윙 궤적, Blast Motion)",
+    "label_en": "Bat Path (Blast Motion)",
+    "description": "Blast Motion 측정 — 어택 앵글, on-plane efficiency, vertical bat angle",
+    "driveline_relative_importance": null,
+    "variables": [
+      {
+        "key": "blast_attack_angle_deg",
+        "weight": 1.0
+      },
+      {
+        "key": "blast_on_plane_efficiency_pct",
+        "weight": 1.0
+      },
+      {
+        "key": "blast_vertical_bat_angle_deg",
+        "weight": 0.5
+      },
+      {
+        "key": "blast_early_connection_deg",
+        "weight": 0.5
+      },
+      {
+        "key": "blast_connection_at_impact_deg",
+        "weight": 0.5
+      }
+    ]
+  },
+  "B7_Consistency": {
+    "label_kr": "B7. Consistency (일관성)",
+    "label_en": "Consistency",
+    "description": "여러 swing 간 SD — 투수 리포트 v33.17·v33.18 분석 동일 철학",
+    "driveline_relative_importance": null,
+    "variables": [
+      {
+        "key": "bat_speed_sd_mph",
+        "weight": 1.0
+      },
+      {
+        "key": "attack_angle_sd_deg",
+        "weight": 0.7
+      },
+      {
+        "key": "time_to_contact_sd_s",
+        "weight": 0.7
+      },
+      {
+        "key": "max_x_factor_sd_deg",
+        "weight": 0.6
+      },
+      {
+        "key": "peak_arm_av_sd_dps",
+        "weight": 0.5
+      },
+      {
+        "key": "peak_trunk_av_sd_dps",
+        "weight": 0.5
+      }
+    ]
+  },
+  "F_Fitness": {
+    "label_kr": "F. Fitness (체력)",
+    "label_en": "Fitness",
+    "description": "메카닉의 물리적 천장을 결정하는 체력 변수",
+    "driveline_relative_importance": null,
+    "variables": [
+      {
+        "key": "grip_strength_kg",
+        "weight": 1.0
+      },
+      {
+        "key": "rotation_pp_w_kg",
+        "weight": 1.0
+      },
+      {
+        "key": "cmj_pp_bm",
+        "weight": 0.8
+      },
+      {
+        "key": "imtp_pp_bm",
+        "weight": 0.8
+      },
+      {
+        "key": "cmj_height_cm",
+        "weight": 0.5
+      },
+      {
+        "key": "broad_jump_cm",
+        "weight": 0.5
+      },
+      {
+        "key": "sprint_30m_s",
+        "weight": 0.5
+      }
+    ]
+  }
+};
+
+
+// =====================================================================
+// 카테고리 종합 점수 계산
+// =====================================================================
+// 가중평균: Σ(weight × score) / Σ(weight)
+// (점수는 metadata_batting.js의 scoreVariable로 산출)
+function categoryScore(catKey, athleteValues) {
+  const cat = CATEGORIES[catKey];
+  if (!cat) return null;
+  let sumWeight = 0;
+  let sumScore = 0;
+  const detail = [];
+  for (const v of cat.variables) {
+    const val = athleteValues[v.key];
+    const score = scoreVariable(v.key, val);
+    if (score == null) {
+      detail.push({ key: v.key, value: val, score: null, weight: v.weight });
+      continue;
+    }
+    sumWeight += v.weight;
+    sumScore += v.weight * score;
+    detail.push({ key: v.key, value: val, score, weight: v.weight });
+  }
+  return {
+    score: sumWeight > 0 ? sumScore / sumWeight : null,
+    n_used: detail.filter(d => d.score != null).length,
+    detail,
+  };
+}
+
+
+// 종합 점수 — 모든 카테고리의 (Driveline 가중치 또는 동일가중) 평균
+function overallScore(athleteValues) {
+  const cats = ['B1_StridePosture','B2_StrideRotation','B3_SwingPosture',
+                'B4_SwingRotation','B5_CoG','B6_BatPath','B7_Consistency','F_Fitness'];
+  let sumWeight = 0, sumScore = 0;
+  const out = {};
+  for (const c of cats) {
+    const r = categoryScore(c, athleteValues);
+    out[c] = r;
+    if (r && r.score != null) {
+      const w = CATEGORIES[c].driveline_relative_importance || 1.0;
+      sumWeight += w;
+      sumScore += w * r.score;
+    }
+  }
+  out.overall = sumWeight > 0 ? sumScore / sumWeight : null;
+  return out;
+}
+
+</script>
+
+<script>
+// app_batting.js
+// =====================================================================
+// 타격 리포트 메인 렌더링 로직
+//
+// 의존: metadata_batting.js, cohort_batting.js
+// 입력: window.ATHLETE_DATA  (HTML에서 임베드되는 선수 측정값 객체)
+// =====================================================================
+
+
+// ===== 유틸 =====
+const fmt = (v, d = 1) => (v == null || isNaN(v)) ? '—' : Number(v).toFixed(d);
+const fmtPct = (v) => (v == null || isNaN(v)) ? '—' : `${Math.round(v)}th`;
+const fmtScore = (v) => (v == null || isNaN(v)) ? '—' : Math.round(v);
+
+// 점수에 따른 컬러 (회색/적색/연두/녹색)
+function scoreColor(s) {
+  if (s == null) return 'var(--c-muted)';
+  if (s < 30)  return 'var(--c-bad)';
+  if (s < 50)  return 'var(--c-warn)';
+  if (s < 70)  return 'var(--c-mid)';
+  return 'var(--c-good)';
+}
+
+// percentile → 5/50/95 위치 표시용
+function pctBand(pct) {
+  if (pct == null) return 'unknown';
+  if (pct < 25) return 'low';
+  if (pct < 75) return 'mid';
+  return 'high';
+}
+
+
+// ===== 1. 선수 카드 =====
+function renderAthleteCard(a) {
+  const name = a.athlete_name || '—';
+  const hand = a.handedness === 'right' ? '우타' : a.handedness === 'left' ? '좌타' : '—';
+  const date = a.capture_datetime ? new Date(a.capture_datetime).toLocaleDateString('ko-KR') : '—';
+  const fps = a.fps ? Math.round(a.fps) : '—';
+  return `
+    <section class="athlete-card">
+      <div class="athlete-id">
+        <div class="athlete-name">${name}</div>
+        <div class="athlete-meta">${hand} · ${date} · ${fps} fps · Uplift Mocap</div>
+      </div>
+      <div class="athlete-body">
+        <div class="vital"><label>신장</label><span>${fmt(a.height_cm,1)} cm</span></div>
+        <div class="vital"><label>체중</label><span>${fmt(a.weight_kg,1)} kg</span></div>
+        <div class="vital"><label>악력</label><span>${fmt(a.grip_strength_kg,1)} kg</span></div>
+        <div class="vital"><label>CMJ</label><span>${fmt(a.cmj_height_cm,1)} cm</span></div>
+        <div class="vital"><label>30m</label><span>${fmt(a.sprint_30m_s,2)} s</span></div>
+      </div>
+    </section>
+  `;
+}
+
+
+// ===== 2. 헤드라인 KPI: Bat Speed (실측 vs 예측) + 종합 점수 =====
+function renderHeadline(a, scores) {
+  const actual    = a.blast_bat_speed_mph;
+  const predicted = predictBatSpeed(a);
+  const residual  = (actual != null && predicted != null) ? (actual - predicted) : null;
+  const overall   = scores.overall;
+
+  // Mechanical ceiling: 종합 점수가 100→Bat Speed 평균, 점수가 130 정도면 어느 정도 ceiling?
+  // 간이: ceiling = predicted + (score-100)/50 * 5 (대략)
+  let ceiling = null;
+  if (overall != null && predicted != null) {
+    ceiling = predicted + Math.max(0, (130 - overall)) * 0.05;
+    ceiling = predicted + (130 - 100) * (predicted * 0.005);  // 약 +1.5% per 30점
+  }
+
+  // Driveline 표기 흉내: "Bat Speed 84.6 mph (+13.8 AE)"
+  // AE = Above Expected; 우리 잔차값을 AE로
+  const aeStr = residual == null ? '' :
+    `<span class="ae ${residual > 0 ? 'pos' : 'neg'}">${residual >= 0 ? '+' : ''}${fmt(residual,1)}<sub>AE</sub></span>`;
+
+  return `
+    <section class="headline">
+      <div class="hl-row">
+        <div class="hl-block primary">
+          <div class="hl-value">${fmt(actual, 1)} <small>mph</small></div>
+          <div class="hl-label">Bat Speed (Blast) ${aeStr}</div>
+          <div class="hl-sub">예측 ${fmt(predicted,1)} mph · 잔차(효율) ${residual==null?'—':(residual>0?'+':'')+fmt(residual,1)} mph</div>
+        </div>
+        <div class="hl-block">
+          <div class="hl-value" style="color:${scoreColor(overall)}">${fmtScore(overall)}</div>
+          <div class="hl-label">Total Mechanical Score</div>
+          <div class="hl-sub">코호트 평균 = 50점 (높을수록 우수)</div>
+        </div>
+        <div class="hl-block">
+          <div class="hl-value">${fmt(a.blast_peak_hand_speed_mph,1)} <small>mph</small></div>
+          <div class="hl-label">Peak Hand Speed</div>
+          <div class="hl-sub">손의 최대 선속도</div>
+        </div>
+        <div class="hl-block">
+          <div class="hl-value">${fmt(a.max_x_factor,1)}<small>°</small></div>
+          <div class="hl-label">Max X-Factor</div>
+          <div class="hl-sub">Hip-Shoulder 분리 최대값</div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+
+// ===== 3. Driveline 5-카테고리 레이더 (SVG) =====
+function renderRadar(scores) {
+  // B1~B5만 (Driveline 원형 5각형)
+  const cats = ['B1_StridePosture','B2_StrideRotation','B3_SwingPosture','B4_SwingRotation','B5_CoG'];
+  const labels = ['Stride Posture','Stride Rotation','Swing Posture','Swing Rotation','CoG'];
+  const values = cats.map(c => scores[c]?.score ?? null);
+
+  // SVG 좌표
+  const W = 360, H = 360;
+  const cx = W/2, cy = H/2;
+  const R = 130;  // 점수 100에 해당하는 반지름
+
+  // 각 꼭짓점 좌표 (12시 방향부터 시계방향)
+  const angle = (i) => (-Math.PI/2) + (i * 2*Math.PI/5);
+  const point = (i, r) => `${cx + r*Math.cos(angle(i))},${cy + r*Math.sin(angle(i))}`;
+
+  // 격자: 25/50/75/100점 동심오각형
+  const rings = [25,50,75,100].map(p => {
+    const r = R * p/100;
+    const pts = [...Array(5).keys()].map(i => point(i, r)).join(' ');
+    return `<polygon points="${pts}" class="radar-ring" />`;
+  }).join('');
+
+  // 축선
+  const axes = [...Array(5).keys()].map(i => {
+    const [x,y] = point(i,R).split(',');
+    return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" class="radar-axis"/>`;
+  }).join('');
+
+  // Elite 기준선 (점수 50, 코호트 평균)
+  const elitePts = [...Array(5).keys()].map(i => point(i, R*0.5)).join(' ');
+
+  // 선수 점수 폴리곤
+  const playerPts = values.map((v,i) => {
+    const r = (v == null) ? 0 : R * Math.min(100, Math.max(0, v))/100;
+    return point(i, r);
+  }).join(' ');
+
+  // 라벨
+  const labelEls = labels.map((lab,i) => {
+    const [x,y] = point(i, R + 28).split(',').map(Number);
+    let anchor = 'middle';
+    if (i === 1 || i === 2) anchor = 'start';
+    else if (i === 3 || i === 4) anchor = 'end';
+    return `<text x="${x}" y="${y+4}" class="radar-label" text-anchor="${anchor}">${lab}</text>`;
+  }).join('');
+
+  // 점수 점
+  const pointDots = values.map((v,i) => {
+    if (v == null) return '';
+    const r = R * Math.min(100, Math.max(0, v))/100;
+    const [x,y] = point(i,r).split(',');
+    return `<circle cx="${x}" cy="${y}" r="4" class="radar-dot"/>`;
+  }).join('');
+
+  return `
+    <section class="radar-section">
+      <h2>Driveline 5-Category Radar</h2>
+      <div class="radar-wrap">
+        <svg viewBox="0 0 ${W} ${H}" class="radar-svg" role="img" aria-label="5-category mechanical scores">
+          ${rings}
+          ${axes}
+          <polygon points="${elitePts}" class="radar-elite"/>
+          <polygon points="${playerPts}" class="radar-player"/>
+          ${pointDots}
+          ${labelEls}
+        </svg>
+        <div class="radar-legend">
+          <div><span class="sw player"></span>선수 점수</div>
+          <div><span class="sw elite"></span>코호트 평균 (50점)</div>
+          ${cats.map((c,i) => `
+            <div class="cat-mini">
+              <span class="cat-mini-name">${labels[i]}</span>
+              <span class="cat-mini-score" style="color:${scoreColor(values[i])}">${fmtScore(values[i])}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+
+// ===== 4. 변수 row (값 + percentile bar + 점수) =====
+function renderVariableRow(varKey, value, weight) {
+  const m = VARIABLE_METADATA[varKey];
+  if (!m) {
+    return `<tr><td colspan="5">알 수 없는 변수: ${varKey}</td></tr>`;
+  }
+  const score = scoreVariable(varKey, value);
+  // percentile (z 기반 근사)
+  let pct = null;
+  if (value != null && !isNaN(value)) {
+    const z = (value - m.mean) / m.sd;
+    pct = 100 * normCdf(z);
+  }
+
+  const valStr = `${fmt(value, m.unit==='s' ? 3 : 2)} <small>${m.unit}</small>`;
+  const refStr = `μ ${fmt(m.mean, 1)} · σ ${fmt(m.sd,1)}`;
+  const dirIcon = m.direction === 'higher_is_better' ? '↑' :
+                  m.direction === 'lower_is_better' ? '↓' : '◎';
+
+  // percentile bar — 0~100 위치에 marker
+  const pctBar = pct == null ? '' : `
+    <div class="pct-bar">
+      <div class="pct-track">
+        <div class="pct-tick low"></div>
+        <div class="pct-tick mid"></div>
+        <div class="pct-tick high"></div>
+      </div>
+      <div class="pct-marker" style="left:${Math.max(0,Math.min(100,pct))}%"></div>
+      <div class="pct-text">${fmtPct(pct)}</div>
+    </div>
+  `;
+
+  return `
+    <tr class="var-row">
+      <td class="var-name">
+        <div class="var-name-kr">${m.label_kr || varKey}</div>
+        <div class="var-name-en">${m.label_en || ''} <span class="dir-icon" title="${m.direction}">${dirIcon}</span></div>
+      </td>
+      <td class="var-value">${valStr}</td>
+      <td class="var-ref">${refStr}</td>
+      <td class="var-pctbar">${pctBar}</td>
+      <td class="var-score" style="color:${scoreColor(score)}">${fmtScore(score)}</td>
+    </tr>
+  `;
+}
+
+
+// ===== 5. 카테고리 카드 (B1~B7, F) =====
+function renderCategoryCard(catKey, scores, athleteValues) {
+  const cat = CATEGORIES[catKey];
+  if (!cat) return '';
+  const r = scores[catKey];
+  const score = r?.score;
+
+  const rows = cat.variables.map(v =>
+    renderVariableRow(v.key, athleteValues[v.key], v.weight)
+  ).join('');
+
+  const importance = cat.driveline_relative_importance != null
+    ? `<span class="dl-imp">Driveline 가중치: ${cat.driveline_relative_importance}</span>`
+    : '';
+
+  return `
+    <section class="cat-card" data-cat="${catKey}">
+      <header class="cat-header">
+        <h3>
+          <span class="cat-id">${catKey.split('_')[0]}</span>
+          ${cat.label_kr}
+        </h3>
+        <div class="cat-score" style="color:${scoreColor(score)}">${fmtScore(score)}</div>
+      </header>
+      <p class="cat-desc">${cat.description} ${importance}</p>
+      <table class="var-table">
+        <thead>
+          <tr>
+            <th>변인</th>
+            <th>선수</th>
+            <th>코호트 (μ·σ)</th>
+            <th>코호트 백분위</th>
+            <th>점수</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </section>
+  `;
+}
+
+
+// ===== 6. Faults 카드 =====
+function renderFaults(a) {
+  const faultKeys = Object.keys(FAULT_LABELS);
+  const present = faultKeys.filter(k => a[k] === 1 || a[k] === true);
+  const absent  = faultKeys.filter(k => a[k] === 0 || a[k] === false);
+
+  if (present.length === 0) {
+    return `
+      <section class="faults-card">
+        <h2>결함 진단 (Uplift)</h2>
+        <p class="faults-clean">측정된 9개 결함 항목 중 발현된 결함이 없습니다. 좋습니다.</p>
+      </section>
+    `;
+  }
+
+  const rows = present.map(k => {
+    const info = FAULT_LABELS[k];
+    return `
+      <div class="fault-item severity-${info.severity}">
+        <span class="fault-mark">⚠</span>
+        <span class="fault-label">${info.kr}</span>
+        <span class="fault-sev">${info.severity === 'high' ? '주의' : '관찰'}</span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <section class="faults-card">
+      <h2>결함 진단 (Uplift) — ${present.length}건</h2>
+      <div class="faults-grid">${rows}</div>
+      <p class="faults-note">
+        결함 항목은 Uplift 자체 알고리즘 판정. 현장 영상 검토 권장.
+        총 ${faultKeys.length}개 항목 중 ${absent.length}개 정상.
+      </p>
+    </section>
+  `;
+}
+
+
+// ===== 7. 코치 노트 (자동 우선순위) =====
+function renderCoachNotes(scores, athleteValues) {
+  // 각 카테고리 점수를 보고 가장 점수 낮은 카테고리, 가장 약한 변수 식별
+  const catList = ['B1_StridePosture','B2_StrideRotation','B3_SwingPosture',
+                   'B4_SwingRotation','B5_CoG','B6_BatPath','B7_Consistency','F_Fitness'];
+  const ranked = catList
+    .map(c => ({c, score: scores[c]?.score, w: CATEGORIES[c].driveline_relative_importance || 0.8}))
+    .filter(x => x.score != null)
+    .sort((a,b) => (a.score * (a.w+0.5)) - (b.score * (b.w+0.5)));  // 점수×가중
+
+  const weakest = ranked.slice(0, 2);
+  const strongest = ranked.slice(-2).reverse();
+
+  // 가장 점수 낮은 변수 1~3개
+  const allDetails = [];
+  for (const c of catList) {
+    const r = scores[c];
+    if (!r?.detail) continue;
+    for (const d of r.detail) {
+      if (d.score != null) {
+        allDetails.push({ ...d, cat: c });
+      }
+    }
+  }
+  const lowestVars = allDetails.sort((a,b) => a.score - b.score).slice(0, 3);
+
+  const weakBullets = weakest.map(w => {
+    const cat = CATEGORIES[w.c];
+    return `<li><strong>${cat.label_kr}</strong> 점수 ${fmtScore(w.score)} — ${cat.description.split('.')[0]}.</li>`;
+  }).join('');
+
+  const lowestBullets = lowestVars.map(v => {
+    const m = VARIABLE_METADATA[v.key];
+    return `<li><strong>${m?.label_kr || v.key}</strong> = ${fmt(v.value,2)} ${m?.unit || ''} (점수 ${fmtScore(v.score)})</li>`;
+  }).join('');
+
+  const strongBullets = strongest.map(s => {
+    const cat = CATEGORIES[s.c];
+    return `<li><strong>${cat.label_kr}</strong> 점수 ${fmtScore(s.score)}</li>`;
+  }).join('');
+
+  return `
+    <section class="coach-notes">
+      <h2>코치 노트 — 자동 우선순위</h2>
+      <div class="cn-grid">
+        <div class="cn-block weak">
+          <h4>우선 보강 카테고리</h4>
+          <ul>${weakBullets}</ul>
+        </div>
+        <div class="cn-block focus">
+          <h4>점수 낮은 변수 Top 3</h4>
+          <ul>${lowestBullets}</ul>
+        </div>
+        <div class="cn-block strong">
+          <h4>강점 카테고리</h4>
+          <ul>${strongBullets}</ul>
+        </div>
+      </div>
+      <p class="cn-note">
+        본 우선순위는 코호트 분포 기준 자동 산출. 실제 코칭 결정은 영상 검토와
+        선수 신체 컨디션을 함께 고려해야 함.
+      </p>
+    </section>
+  `;
+}
+
+
+// ===== 8. 메서드 노트 (footer) =====
+function renderMethodNote() {
+  return `
+    <section class="method-note">
+      <h3>방법론 노트</h3>
+      <ul>
+        <li><strong>코호트:</strong> 합성 데이터 n=${COHORT_INFO.n_total} (실제 데이터 누적 시 교체 예정).</li>
+        <li><strong>점수 산출:</strong>
+          higher/lower-is-better 변수는 z-score 기반 percentile,
+          two-sided 변수(어택앵글, X-factor 등)는 optimal 근처 Gaussian 점수.</li>
+        <li><strong>카테고리 가중치:</strong> Driveline의 Per-1mph 상대 중요도를 변수 weight로 사용.
+          B1 Stride Posture (1.53), B2 Stride Rotation (1.26), B3 Swing Posture (1.13),
+          B4 Swing Rotation (1.64), B5 CoG (1.68).</li>
+        <li><strong>Bat Speed 회귀:</strong> n=${BAT_SPEED_REGRESSION.n}, R² = ${BAT_SPEED_REGRESSION.R2}, LOO-CV R² = ${BAT_SPEED_REGRESSION.LOO_CV_R2}.
+          예측-실측 잔차(AE)는 메카닉 효율성의 proxy.</li>
+        <li><strong>Blast Motion / 체력:</strong> 본 v1 버전에서는 합성 데이터.
+          실제 데이터로 교체할 때 athleteValues에 그대로 덮어쓰면 됩니다.</li>
+        <li><strong>Driveline 절대값 비교:</strong> Uplift와 Driveline의 좌표계·필터링이 다를 수 있어
+          숫자 직접 비교는 지양. 코호트 내 상대 percentile이 1차 평가 기준.</li>
+      </ul>
+    </section>
+  `;
+}
+
+
+// ===== 메인 렌더 =====
+function renderReport() {
+  const a = window.ATHLETE_DATA;
+  if (!a) {
+    document.getElementById('app').innerHTML = '<p class="error">선수 데이터가 로드되지 않았습니다.</p>';
+    return;
+  }
+  const scores = overallScore(a);
+
+  const html = `
+    <div class="report-shell">
+      <header class="report-top">
+        <div class="brand">
+          <div class="brand-mark">⚾ Uplift Hitting Report</div>
+          <div class="brand-sub">v1.0 · Mechanical Composite Scores</div>
+        </div>
+        <div class="brand-cohort">코호트 n=${COHORT_INFO.n_total}</div>
+      </header>
+
+      ${renderAthleteCard(a)}
+      ${renderHeadline(a, scores)}
+      ${renderRadar(scores)}
+
+      <div class="cat-grid">
+        ${renderCategoryCard('B1_StridePosture', scores, a)}
+        ${renderCategoryCard('B2_StrideRotation', scores, a)}
+        ${renderCategoryCard('B3_SwingPosture', scores, a)}
+        ${renderCategoryCard('B4_SwingRotation', scores, a)}
+        ${renderCategoryCard('B5_CoG', scores, a)}
+        ${renderCategoryCard('B6_BatPath', scores, a)}
+        ${renderCategoryCard('B7_Consistency', scores, a)}
+        ${renderCategoryCard('F_Fitness', scores, a)}
+      </div>
+
+      ${renderFaults(a)}
+      ${renderCoachNotes(scores, a)}
+      ${renderMethodNote()}
+
+      <footer class="report-foot">
+        Generated ${new Date().toLocaleString('ko-KR')} · Uplift Hitting Report v1.0
+      </footer>
+    </div>
+  `;
+
+  document.getElementById('app').innerHTML = html;
+}
+
+// 자동 실행
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderReport);
+  } else {
+    renderReport();
+  }
+}
+
+</script>
+
+</body>
+</html>

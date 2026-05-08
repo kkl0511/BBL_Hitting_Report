@@ -1,0 +1,69 @@
+{
+  "model": "BAT_SPEED_REGRESSION_v1",
+  "target": "bat_speed_mph",
+  "predictors": [
+    "upper_arm_rotation_velo_at_swing_dps",
+    "torso_rotation_velo_at_swing_dps",
+    "cog_decel_mps",
+    "max_x_factor",
+    "pelvis_to_trunk_velocity_speedup",
+    "on_plane_efficiency",
+    "grip_strength_kg",
+    "cmj_pp_bm",
+    "rotation_pp_w_kg",
+    "height_cm"
+  ],
+  "intercept": -4.413976,
+  "coefs": {
+    "upper_arm_rotation_velo_at_swing_dps": 0.008317,
+    "torso_rotation_velo_at_swing_dps": 0.017434,
+    "cog_decel_mps": 2.170402,
+    "max_x_factor": 0.118384,
+    "pelvis_to_trunk_velocity_speedup": 3.144055,
+    "on_plane_efficiency": 0.156383,
+    "grip_strength_kg": 0.07399,
+    "cmj_pp_bm": 0.06589,
+    "rotation_pp_w_kg": 0.516242,
+    "height_cm": 0.041837
+  },
+  "beta_standardized": {
+    "upper_arm_rotation_velo_at_swing_dps": 0.3927,
+    "torso_rotation_velo_at_swing_dps": 0.294,
+    "cog_decel_mps": 0.0999,
+    "max_x_factor": 0.1584,
+    "pelvis_to_trunk_velocity_speedup": 0.1208,
+    "on_plane_efficiency": 0.1633,
+    "grip_strength_kg": 0.0814,
+    "cmj_pp_bm": 0.0645,
+    "rotation_pp_w_kg": 0.1042,
+    "height_cm": 0.0418
+  },
+  "R2": 0.8357,
+  "adj_R2": 0.8119,
+  "LOO_CV_R2": 0.7736,
+  "n": 80,
+  "predictor_means": {
+    "upper_arm_rotation_velo_at_swing_dps": 1484.5847,
+    "torso_rotation_velo_at_swing_dps": 871.3175,
+    "cog_decel_mps": 1.0825,
+    "max_x_factor": 28.5652,
+    "pelvis_to_trunk_velocity_speedup": 1.4322,
+    "on_plane_efficiency": 83.2155,
+    "grip_strength_kg": 49.5625,
+    "cmj_pp_bm": 53.6628,
+    "rotation_pp_w_kg": 6.9475,
+    "height_cm": 179.3688
+  },
+  "predictor_sds": {
+    "upper_arm_rotation_velo_at_swing_dps": 326.819,
+    "torso_rotation_velo_at_swing_dps": 116.7183,
+    "cog_decel_mps": 0.3187,
+    "max_x_factor": 9.2597,
+    "pelvis_to_trunk_velocity_speedup": 0.266,
+    "on_plane_efficiency": 7.226,
+    "grip_strength_kg": 7.6149,
+    "cmj_pp_bm": 6.77,
+    "rotation_pp_w_kg": 1.397,
+    "height_cm": 6.9176
+  }
+}
