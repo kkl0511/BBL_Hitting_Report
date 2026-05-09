@@ -1,22 +1,25 @@
 """
 generate_synthetic_cohort.py
 ============================
-KBO 고교/대학 수준 타자 80명의 합성 코호트 생성.
+한국 고교 야구 타자 80명의 합성 코호트 생성 (v2 — HS 베이스라인).
 
-목적: 투수 리포트의 BBL n=169 sessions 같은 코호트 분포를 타격에서도 흉내내기.
-실제 데이터가 쌓이기 전까지는 이 합성 코호트의 분포를 percentile 기준으로 사용.
+목적: 코호트 분포를 'KBO 고교 야구' 수준으로 보정.
+v1(elite-skewed)에서는 측정 선수가 코호트 대비 낮게 보였는데,
+v2에서는 우수 고교생(엄준상 같은 상위 타자)이 ~95+ percentile에 위치하도록 재보정.
 
 생성 데이터:
   1. data/cohort_batting_per_session.csv  — 메카닉 스칼라 (Uplift 추출 + Blast Motion)
   2. data/master_fitness_batting.csv      — 체력 데이터 (각 선수 1행)
 
-설계 핵심:
-  - 80명 batters, 각 선수 1개 session
-  - "잠재 능력(latent_skill)"이라는 숨은 변수로 메카닉 + 체력 + Bat Speed에
-    상관관계를 부여 (현실에서 잘 치는 선수가 회전속도도 빠르고 그립도 강한 경향)
-  - 노이즈 추가로 100% 결정론적이지 않게
-  - 마지막에 Bat Speed를 "잠재 능력 + 일부 메카닉/체력 변수의 선형 결합 + 노이즈"로 산출
-    → 다중회귀 모델 학습 가능하게
+v2 설계 핵심 (vs v1):
+  - 회전 속도 평균 ↓ (HS는 프로/Driveline elite보다 낮음)
+    · pelvis_velo_at_swing  v1 620 → v2 470 °/s
+    · torso_velo_at_swing   v1 860 → v2 580 °/s
+    · upper_arm_velo_at_swing v1 1500 → v2 750 °/s
+  - max_x_factor 평균 v1 30 → v2 15°
+  - 회전 효율 (speedup) 하향
+  - Bat Speed baseline v1 65 → v2 47 mph
+  - 엄준상의 측정값(599.7/717.7/947.3, 22°)은 모두 z≈1.6 (상위 ~5%)에 위치
 """
 
 import numpy as np
@@ -82,33 +85,33 @@ mech['torso_rotation_at_fp_deg']          = correlated(-15, 9, -0.4, lower=-50, 
 mech['rear_shoulder_adduction_at_fp_deg'] = correlated(-40, 14, -0.25, lower=-80, upper=10)
 mech['lead_hip_posterior_tilt_at_fp_deg'] = correlated(5, 9, 0.15, lower=-20, upper=30)
 
-# Stride Rotation
-mech['max_pelvis_rotation_velo_at_stride_dps'] = correlated(420, 110, 0.55, lower=100, upper=900)
-mech['max_torso_rotation_velo_at_stride_dps']  = correlated(470, 130, 0.45, lower=100, upper=1000)
+# Stride Rotation (v2: HS baseline)
+mech['max_pelvis_rotation_velo_at_stride_dps'] = correlated(420, 110, 0.55, lower=100, upper=800)
+mech['max_torso_rotation_velo_at_stride_dps']  = correlated(450, 110, 0.45, lower=100, upper=850)
 
 # Swing Posture
-mech['pelvis_rotation_at_swing_deg']        = correlated(72, 14, 0.3, lower=20, upper=130)
-mech['lead_hip_posterior_tilt_at_swing_deg']= correlated(8, 9, 0.15, lower=-20, upper=40)
-mech['lead_hip_adduction_at_fp_deg']        = correlated(20, 10, 0.1, lower=-10, upper=50)
-mech['lead_hip_adduction_at_swing_deg']     = correlated(28, 11, 0.15, lower=-10, upper=60)
+mech['pelvis_rotation_at_swing_deg']        = correlated(60, 12, 0.3, lower=20, upper=110)
+mech['lead_hip_posterior_tilt_at_swing_deg']= correlated(6, 8, 0.15, lower=-20, upper=35)
+mech['lead_hip_adduction_at_fp_deg']        = correlated(18, 9, 0.1, lower=-10, upper=45)
+mech['lead_hip_adduction_at_swing_deg']     = correlated(25, 10, 0.15, lower=-10, upper=55)
 
-# Swing Rotation
-mech['pelvis_rotation_velo_at_swing_dps']   = correlated(620, 110, 0.55, lower=200, upper=1000)
-mech['torso_rotation_velo_at_swing_dps']    = correlated(860, 130, 0.65, lower=300, upper=1300)
-mech['upper_arm_rotation_velo_at_swing_dps']= correlated(1500, 350, 0.6, lower=500, upper=3000)
+# Swing Rotation (v2: HS baseline — 평균은 KBO 고교 우타 typical)
+mech['pelvis_rotation_velo_at_swing_dps']   = correlated(470, 80, 0.55, lower=200, upper=750)
+mech['torso_rotation_velo_at_swing_dps']    = correlated(580, 85, 0.65, lower=300, upper=850)
+mech['upper_arm_rotation_velo_at_swing_dps']= correlated(750, 120, 0.6, lower=400, upper=1200)
 
-# CoG
-mech['max_cog_velo_at_stride_mps']  = correlated(1.05, 0.22, 0.35, lower=0.2, upper=2.0)
-mech['max_cog_velo_mps']            = correlated(1.10, 0.25, 0.4, lower=0.2, upper=2.2)
-mech['cog_decel_mps']               = correlated(1.05, 0.32, 0.55, lower=0.2, upper=2.5)  # high importance!
+# CoG (v2: HS baseline — 약간 하향)
+mech['max_cog_velo_at_stride_mps']  = correlated(0.75, 0.20, 0.35, lower=0.2, upper=1.6)
+mech['max_cog_velo_mps']            = correlated(0.80, 0.22, 0.40, lower=0.2, upper=1.8)
+mech['cog_decel_mps']               = correlated(0.65, 0.20, 0.55, lower=0.15, upper=1.5)
 
-# Uplift extras
-mech['peak_pelvis_angular_velocity'] = mech['pelvis_rotation_velo_at_swing_dps'] + RNG.normal(0, 30, N)
-mech['peak_trunk_angular_velocity']  = mech['torso_rotation_velo_at_swing_dps']  + RNG.normal(0, 35, N)
-mech['peak_arm_angular_velocity']    = mech['upper_arm_rotation_velo_at_swing_dps'] + RNG.normal(0, 50, N)
-mech['max_x_factor']                 = correlated(30, 10, 0.45, lower=5, upper=70)
-mech['pelvis_to_trunk_velocity_speedup'] = correlated(1.45, 0.25, 0.5, lower=0.6, upper=2.5)
-mech['trunk_to_arm_velocity_speedup']    = correlated(1.78, 0.35, 0.45, lower=0.6, upper=3.0)
+# Uplift extras (v2)
+mech['peak_pelvis_angular_velocity'] = mech['pelvis_rotation_velo_at_swing_dps'] + RNG.normal(0, 25, N)
+mech['peak_trunk_angular_velocity']  = mech['torso_rotation_velo_at_swing_dps']  + RNG.normal(0, 30, N)
+mech['peak_arm_angular_velocity']    = mech['upper_arm_rotation_velo_at_swing_dps'] + RNG.normal(0, 40, N)
+mech['max_x_factor']                 = correlated(15, 4.5, 0.45, lower=3, upper=35)
+mech['pelvis_to_trunk_velocity_speedup'] = correlated(1.05, 0.10, 0.5, lower=0.7, upper=1.5)
+mech['trunk_to_arm_velocity_speedup']    = correlated(1.35, 0.18, 0.45, lower=0.8, upper=2.0)
 
 # Bat path / contact
 mech['attack_angle']         = correlated(7, 8, 0.25, lower=-20, upper=30)
@@ -151,19 +154,19 @@ mech['fault_crashing']                 = fault_prob(0.10, 0.3)
 # ============================================================================
 # 4. 체력 변수 (master_fitness)
 # ============================================================================
-# 신체 — 잠재능력과 일부 상관 (체격 좋은 선수가 잘 치는 경향)
-height_cm = correlated(178, 6.5, 0.2, lower=160, upper=195)
-weight_kg = correlated(80, 9, 0.25, lower=58, upper=110)
+# 신체 (v2: 한국 고교 야구선수 평균)
+height_cm = correlated(176, 6.5, 0.2, lower=158, upper=192)
+weight_kg = correlated(75, 9, 0.25, lower=55, upper=105)
 height_m  = height_cm / 100.0
 
-# 파워/근력 — 잠재능력과 강한 상관
-grip_strength_kg = correlated(50, 8, 0.55, lower=25, upper=75)         # 악력
-cmj_height_cm    = correlated(48, 7, 0.5, lower=25, upper=70)          # CMJ 점프 높이
-cmj_pp_bm        = correlated(54, 7, 0.5, lower=30, upper=80)          # CMJ peak power per BM (W/kg)
-imtp_pp_bm       = correlated(28, 4, 0.5, lower=15, upper=45)          # IMTP relative power
-rotation_pp_w_kg = correlated(7.0, 1.5, 0.55, lower=2.5, upper=12)     # 회전 파워 (medball 등)
-sprint_30m_s     = correlated(4.30, 0.25, -0.45, lower=3.7, upper=5.2) # 30m 빠를수록 좋음 → 음 상관
-broad_jump_cm    = correlated(245, 25, 0.5, lower=170, upper=320)
+# 파워/근력 (v2: HS 평균 — 프로/대학보다 약간 낮음)
+grip_strength_kg = correlated(44, 7, 0.55, lower=22, upper=68)         # 악력
+cmj_height_cm    = correlated(42, 6, 0.5, lower=25, upper=62)          # CMJ 점프 높이
+cmj_pp_bm        = correlated(48, 6, 0.5, lower=28, upper=72)          # CMJ peak power per BM (W/kg)
+imtp_pp_bm       = correlated(24, 4, 0.5, lower=14, upper=40)          # IMTP relative power
+rotation_pp_w_kg = correlated(5.5, 1.3, 0.55, lower=2.0, upper=10)     # 회전 파워 (medball 등)
+sprint_30m_s     = correlated(4.45, 0.25, -0.45, lower=3.9, upper=5.3) # 30m 빠를수록 좋음 → 음 상관
+broad_jump_cm    = correlated(225, 22, 0.5, lower=160, upper=295)
 
 
 # ============================================================================
@@ -184,19 +187,19 @@ broad_jump_cm    = correlated(245, 25, 0.5, lower=170, upper=320)
 blast = {}
 
 # Bat Speed: 잠재능력 + 메카닉 + 체력에 의해 결정 (목표 변수)
-# 다중회귀 학습이 의미 있게 되도록 일부 변수 선형 결합
+# v2: HS baseline ~47 mph (KBO 고교 우타 typical), top ~58 mph
 bat_speed_mph = (
-    65.0  # baseline
-    + 4.0 * latent_skill  # 강한 잠재능력 효과
-    + 0.008 * (mech['upper_arm_rotation_velo_at_swing_dps'] - 1500)
-    + 0.012 * (mech['torso_rotation_velo_at_swing_dps'] - 860)
-    + 0.06  * (grip_strength_kg - 50)
-    + 0.08  * (cmj_pp_bm - 54)
-    + 0.10  * (mech['max_x_factor'] - 30)
-    + 1.5   * (mech['cog_decel_mps'] - 1.05)
-    + RNG.normal(0, 2.5, N)  # 잔차
+    47.0  # HS baseline
+    + 3.5 * latent_skill  # 강한 잠재능력 효과
+    + 0.012 * (mech['upper_arm_rotation_velo_at_swing_dps'] - 750)
+    + 0.015 * (mech['torso_rotation_velo_at_swing_dps'] - 580)
+    + 0.06  * (grip_strength_kg - 44)
+    + 0.08  * (cmj_pp_bm - 48)
+    + 0.18  * (mech['max_x_factor'] - 15)
+    + 2.0   * (mech['cog_decel_mps'] - 0.65)
+    + RNG.normal(0, 2.3, N)  # 잔차
 )
-bat_speed_mph = np.clip(bat_speed_mph, 50, 90)
+bat_speed_mph = np.clip(bat_speed_mph, 35, 70)
 blast['bat_speed_mph'] = bat_speed_mph
 
 # Peak Hand Speed: bat speed의 약 30~35% 수준 + 노이즈
@@ -231,12 +234,13 @@ blast['connection_at_impact_deg'] = correlated(91, 6, 0.30, lower=65, upper=110)
 # ============================================================================
 # 6. 일관성 SD 변수 (선수 내 swing 간 표준편차) — 잠재능력 높을수록 SD 작음
 # ============================================================================
-mech['bat_speed_sd_mph']       = correlated(2.2, 0.7, -0.55, lower=0.4, upper=5.0)
-mech['attack_angle_sd_deg']    = correlated(3.5, 1.2, -0.50, lower=0.5, upper=8.0)
-mech['time_to_contact_sd_s']   = correlated(0.012, 0.005, -0.45, lower=0.002, upper=0.030)
-mech['peak_arm_av_sd_dps']     = correlated(120, 50, -0.5, lower=20, upper=300)
-mech['peak_trunk_av_sd_dps']   = correlated(50, 22, -0.55, lower=10, upper=150)
-mech['max_x_factor_sd_deg']    = correlated(3.5, 1.6, -0.55, lower=0.5, upper=10)
+# v2: HS는 SD가 더 큼(스윙 일관성 떨어짐). 엄준상 같은 top tier가 z≈-1.6 ⇒ 상위 5%.
+mech['bat_speed_sd_mph']       = correlated(3.0, 1.0, -0.55, lower=0.5, upper=6.5)
+mech['attack_angle_sd_deg']    = correlated(4.5, 1.5, -0.50, lower=0.7, upper=10.0)
+mech['time_to_contact_sd_s']   = correlated(0.014, 0.006, -0.45, lower=0.002, upper=0.035)
+mech['peak_arm_av_sd_dps']     = correlated(170, 45, -0.5,  lower=40, upper=320)
+mech['peak_trunk_av_sd_dps']   = correlated(70,  22, -0.55, lower=15, upper=160)
+mech['max_x_factor_sd_deg']    = correlated(4.5, 1.7, -0.55, lower=0.6, upper=12)
 
 
 # ============================================================================
